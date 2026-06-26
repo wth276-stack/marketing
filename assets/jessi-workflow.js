@@ -2495,6 +2495,10 @@ ${strategyBlock}
     bindWorkflowBackupControls("export-workflow-json", "import-workflow-json");
     bindWorkflowBackupControls("export-workflow-json-ref", "import-workflow-json-ref");
 
+    bindOptional("auth-logout", "click", () => {
+      if (typeof window.jessiAuthLogout === "function") window.jessiAuthLogout();
+    });
+
     bindOptional("phase1-switch-btn", "click", () => {
       state.phase1CompleteBannerDismissed = true;
       saveState(state);

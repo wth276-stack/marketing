@@ -25,6 +25,9 @@ test("workflow exposes the required standalone app structure", async () => {
 
   assert.match(html, /<title>Jessi Beauty Academy · 完整營運流程<\/title>/);
   assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1"/);
+  assert.match(html, /<link rel="stylesheet" href="assets\/jessi-auth\.css(\?[^"]+)?">/);
+  assert.match(html, /<script src="assets\/jessi-auth-config\.js(\?[^"]+)?"><\/script>/);
+  assert.match(html, /<script src="assets\/jessi-auth\.js(\?[^"]+)?"><\/script>/);
   assert.match(
     html,
     /<link rel="stylesheet" href="assets\/jessi-workflow\.css(\?[^"]+)?">/
@@ -70,6 +73,7 @@ test("workflow PWA manifest and service worker assets", async () => {
   assert.match(manifest.start_url, /jessi-beauty-marketing-workflow\.html/);
 
   assert.match(sw, /jessi-beauty-marketing-workflow\.html/);
+  assert.match(sw, /jessi-auth\.js/);
   assert.match(sw, /jessi-workflow\.css/);
   assert.match(sw, /jessi-workflow\.js/);
   assert.match(sw, /jessi-beauty-academy-logo\.svg/);
@@ -109,6 +113,7 @@ test("workflow declares storage, export/import, and core JavaScript contracts", 
     "import-workflow-json",
     "export-workflow-json-ref",
     "import-workflow-json-ref",
+    "auth-logout",
     "salon-view-toggle",
     "salon-view-toggle-mobile",
     "weekly-report-template",

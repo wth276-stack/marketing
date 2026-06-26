@@ -1,10 +1,14 @@
-const CACHE_NAME = "jessi-workflow-cache-v9";
+const CACHE_NAME = "jessi-workflow-cache-v10";
 
 /** Paths relative to service worker scope (site / project root). */
 const PRECACHE_PATHS = [
   "index.html",
   "jessi-beauty-marketing-workflow.html",
   "manifest.json",
+  "assets/jessi-auth.css",
+  "assets/jessi-auth-config.js",
+  "assets/jessi-auth.js",
+  "assets/jessi-index-redirect.js",
   "assets/jessi-workflow.css",
   "assets/jessi-workflow.js",
   "assets/jessi-beauty-academy-logo.svg",
