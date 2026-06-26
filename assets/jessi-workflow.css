@@ -1067,6 +1067,7 @@
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
       width: 100%;
+      grid-auto-rows: minmax(88px, auto);
     }
     .cal-dow {
       position: sticky;
@@ -1086,6 +1087,7 @@
     .month-cal-board > :nth-child(7n) { border-right: 0; }
     .cal-cell {
       min-height: 88px;
+      height: 100%;
       min-width: 0;
       padding: 6px 4px;
       border-right: 1px solid var(--line);
@@ -1104,33 +1106,43 @@
     .cal-cell-num {
       font-weight: 800;
       font-size: 13px;
-      margin-bottom: 3px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 2px;
+      margin-bottom: 2px;
       min-width: 0;
     }
-    .cal-cell-num > span:first-child { flex-shrink: 0; }
-    .cal-cell-num > span:last-child {
+    .cal-cell-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      margin-bottom: 3px;
       min-width: 0;
-      flex: 1 1 auto;
-      text-align: right;
+      max-width: 100%;
     }
     .cal-cell-tag {
       font-size: 8px;
       font-weight: 700;
-      padding: 1px 4px;
-      border-radius: 999px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      padding: 2px 4px;
+      border-radius: 6px;
+      line-height: 1.2;
       max-width: 100%;
-      display: inline-block;
-      vertical-align: top;
+      overflow: hidden;
+      display: block;
+      text-align: center;
+      word-break: break-all;
     }
-    .cal-cell-tag.hol { background: #f5a0b0; color: #fff; }
-    .cal-cell-tag.shoot { background: #b8a0d4; color: #fff; }
+    .cal-cell-tag.hol {
+      background: #f5a0b0;
+      color: #fff;
+      white-space: pre-line;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+    .cal-cell-tag.shoot {
+      background: #b8a0d4;
+      color: #fff;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
     .cal-cell-lines { color: var(--muted); word-break: break-word; }
     .cal-cell-lines strong { color: #5c4558; font-weight: 700; }
 

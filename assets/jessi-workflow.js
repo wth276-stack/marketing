@@ -1503,7 +1503,10 @@ ${strategyBlock}
         if (key === todayKey) cell.classList.add("today");
 
         const tags = [];
-        if (pubHol) tags.push(`<span class="cal-cell-tag hol" title="${getHolidayNote(key)}">${shortHolidayTag(getHolidayNote(key))}</span>`);
+        if (pubHol) {
+          const holNote = getHolidayNote(key);
+          tags.push(`<span class="cal-cell-tag hol" title="${escapeHtml(holNote)}">${escapeHtml(shortHolidayTag(holNote))}</span>`);
+        }
         else if (sunday) tags.push(`<span class="cal-cell-tag hol">店休</span>`);
         else if (shoot && dow === 2) tags.push(`<span class="cal-cell-tag shoot">拍攝</span>`);
 
@@ -1515,10 +1518,8 @@ ${strategyBlock}
           ? `M1 W${state.m1Week}` : "";
 
         cell.innerHTML = `
-          <div class="cal-cell-num">
-            <span>${d.getDate()}</span>
-            <span>${tags.join("")}</span>
-          </div>
+          <div class="cal-cell-num"><span>${d.getDate()}</span></div>
+          ${tags.length ? `<div class="cal-cell-tags">${tags.join("")}</div>` : ""}
           <div class="cal-cell-lines">
             ${m1Tag ? `<strong>${m1Tag}</strong><br>` : ""}
             ${showTheme ? `<strong>${truncate(theme, 16)}</strong><br>` : ""}
@@ -1706,19 +1707,32 @@ ${strategyBlock}
     }
 
     function shortHolidayTag(note) {
+      const trimmed = (note || "").trim();
+      if (!trimmed) return "假期";
       const map = {
         "香港特別行政區成立紀念日": "七一",
         "香港特區成立紀念日": "七一",
-        "耶穌受難節翌日": "受難節翌日",
-        "清明節翌日": "清明翌日",
-        "復活節星期一翌日": "復活節翌日",
-        "佛誕翌日": "佛誕翌日",
-        "中秋節翌日": "中秋翌日",
-        "重陽節翌日": "重陽翌日",
-        "聖誕節後第一個周日": "聖誕後"
+        "耶穌受難節翌日": "受難\n節翌日",
+        "清明節翌日": "清明\n翌日",
+        "復活節星期一翌日": "復活\n節翌日",
+        "佛誕翌日": "佛誕\n翌日",
+        "中秋節翌日": "中秋\n翌日",
+        "重陽節翌日": "重陽\n翌日",
+        "聖誕節後第一個周日": "聖誕\n後"
       };
-      if (map[note]) return map[note];
-      return note.length > 5 ? note.slice(0, 4) + "…" : note;
+      if (map[trimmed]) return map[trimmed];
+      if (/香港.*成立|七一/.test(trimmed)) return "七一";
+      if (trimmed.length <= 4) return trimmed;
+      if (trimmed.length <= 8) return trimmed.slice(0, 4) + "\n" + trimmed.slice(4);
+      return trimmed.slice(0, 4) + "\n" + trimmed.slice(4, 7) + "…";
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
     }
 
     function getTasksForDay(dayConfig, phase, shoot) {
