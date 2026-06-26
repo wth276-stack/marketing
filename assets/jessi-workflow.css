@@ -1051,6 +1051,13 @@
       overflow: hidden;
       background: #fff;
     }
+    .month-cal-scroll {
+      /* desktop: natural height */
+    }
+    .month-cal-scroll:focus-visible {
+      outline: 3px solid rgba(232, 138, 170, .45);
+      outline-offset: -3px;
+    }
     .month-cal-head {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -1675,6 +1682,30 @@
       .month-layout { grid-template-columns: 1fr; }
       .theme-bar-row { grid-template-columns: 1fr; }
       .cal-cell { min-height: 72px; }
+      main { padding-bottom: 100px; }
+      .month-calendar-wrap {
+        display: flex;
+        flex-direction: column;
+        max-height: min(72vh, calc(100vh - 12rem));
+      }
+      @supports (height: 100dvh) {
+        .month-calendar-wrap {
+          max-height: min(75dvh, calc(100dvh - 11rem));
+        }
+      }
+      .month-cal-head { flex-shrink: 0; }
+      .month-cal-scroll {
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+      }
+      .month-cal-scroll::after {
+        content: "";
+        display: block;
+        height: 8px;
+      }
       .form-grid-2, .research-grid { grid-template-columns: 1fr; }
       .mix-bar-row { grid-template-columns: 64px 1fr 40px 40px; }
       .daily-check-widget { right: 12px; bottom: 16px; }
