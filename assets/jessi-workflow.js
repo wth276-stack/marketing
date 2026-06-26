@@ -1503,7 +1503,7 @@ ${strategyBlock}
         if (key === todayKey) cell.classList.add("today");
 
         const tags = [];
-        if (pubHol) tags.push(`<span class="cal-cell-tag hol">${getHolidayNote(key)}</span>`);
+        if (pubHol) tags.push(`<span class="cal-cell-tag hol" title="${getHolidayNote(key)}">${shortHolidayTag(getHolidayNote(key))}</span>`);
         else if (sunday) tags.push(`<span class="cal-cell-tag hol">店休</span>`);
         else if (shoot && dow === 2) tags.push(`<span class="cal-cell-tag shoot">拍攝</span>`);
 
@@ -1703,6 +1703,22 @@ ${strategyBlock}
         return HK_PUBLIC_HOLIDAYS_2026[dateKey];
       }
       return "公眾假期";
+    }
+
+    function shortHolidayTag(note) {
+      const map = {
+        "香港特別行政區成立紀念日": "七一",
+        "香港特區成立紀念日": "七一",
+        "耶穌受難節翌日": "受難節翌日",
+        "清明節翌日": "清明翌日",
+        "復活節星期一翌日": "復活節翌日",
+        "佛誕翌日": "佛誕翌日",
+        "中秋節翌日": "中秋翌日",
+        "重陽節翌日": "重陽翌日",
+        "聖誕節後第一個周日": "聖誕後"
+      };
+      if (map[note]) return map[note];
+      return note.length > 5 ? note.slice(0, 4) + "…" : note;
     }
 
     function getTasksForDay(dayConfig, phase, shoot) {
