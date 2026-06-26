@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>美容院 Marketing Tracker</title>
+  <style>
+    :root {
+      --ink: #172026;
+      --muted: #62707a;
+      --paper: #f6f2ea;
+      --panel: #ffffff;
+      --line: #d9ded8;
+      --jade: #0f7c69;
+      --jade-dark: #07594c;
+      --coral: #dc6b55;
+      --blue: #305f9f;
+      --amber: #bd7a13;
+      --shadow: 0 18px 48px rgba(23, 32, 38, .12);
+      --radius: 8px;
+      font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(15, 124, 105, .08) 1px, transparent 1px) 0 0 / 44px 44px,
+        linear-gradient(0deg, rgba(48, 95, 159, .06) 1px, transparent 1px) 0 0 / 44px 44px,
+        var(--paper);
+      overflow-x: hidden;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(48, 95, 159, .42);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      background: #172026;
+      color: #eef5f1;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 10px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,.16);
+    }
+
+    .brand small {
+      color: #a7c7be;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: #c7d6d1;
+      line-height: 1.6;
+    }
+
+    nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    nav a {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      color: #eef5f1;
+      text-decoration: none;
+      border-radius: 7px;
+      background: rgba(255,255,255,.05);
+    }
+
+    nav a:hover { background: rgba(255,255,255,.12); }
+
+    .side-note {
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: var(--radius);
+      color: #dce7e2;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    main {
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+      max-width: 1500px;
+      min-width: 0;
+      width: auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 16px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+      min-width: 0;
+    }
+
+    .topbar strong { font-size: 18px; }
+    .topbar p { margin: 4px 0 0; color: var(--muted); }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .btn {
+      padding: 10px 12px;
+      color: #fff;
+      background: var(--jade);
+      min-height: 42px;
+    }
+
+    .btn.secondary {
+      color: var(--ink);
+      background: #e7ece8;
+    }
+
+    .btn.warning { background: var(--coral); }
+    .btn.blue { background: var(--blue); }
+
+    .file-button {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      min-height: 42px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      color: var(--ink);
+      background: #e7ece8;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .file-button input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    section {
+      background: rgba(255,255,255,.86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .section-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 118px;
+      padding: 14px;
+      background: #f9fbfa;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .metric em {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(340px, .88fr) minmax(0, 1.12fr);
+      gap: 18px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #cbd4cf;
+      border-radius: 7px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 96px;
+      line-height: 1.5;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .privacy-rail {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      background: #fff7ec;
+      border: 1px solid #ead0a8;
+      border-radius: var(--radius);
+      line-height: 1.55;
+    }
+
+    .privacy-rail strong { color: #8b4f00; }
+
+    .canvas-wrap {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: 300px;
+      background: #fbfcfb;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.3fr repeat(3, minmax(130px, .7fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf0ed;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #eef5f1;
+      color: #33423d;
+      font-size: 13px;
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--jade);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-pill.lost { background: var(--coral); }
+    .status-pill.waiting { background: var(--amber); }
+    .status-pill.won { background: var(--blue); }
+
+    .mini-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mini-actions button {
+      padding: 7px 9px;
+      background: #e7ece8;
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .report-box, .prompt-box {
+      white-space: pre-wrap;
+      min-height: 180px;
+      padding: 14px;
+      background: #172026;
+      color: #eef5f1;
+      border-radius: var(--radius);
+      line-height: 1.65;
+      overflow: auto;
+    }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .agent-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfb;
+      line-height: 1.55;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .agent-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--jade-dark);
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfb;
+      line-height: 1.55;
+    }
+
+    .notice {
+      padding: 12px;
+      color: #33423d;
+      background: #eef5f1;
+      border-left: 4px solid var(--jade);
+      border-radius: 6px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 1080px) {
+      .app-shell { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col, .chart-grid, .agent-grid { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      main { padding: 12px; }
+      aside { padding: 18px 12px; }
+      nav { grid-template-columns: 1fr; }
+      .grid-4, .form-grid, .filters { grid-template-columns: 1fr; }
+      .section-head { display: block; }
+      canvas { height: 260px; }
+      .toolbar { width: 100%; }
+      .btn, .file-button { width: 100%; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      aside, .topbar, .toolbar, .mini-actions, form, .filters { display: none !important; }
+      .app-shell { display: block; }
+      main { padding: 0; }
+      section { box-shadow: none; break-inside: avoid; margin-bottom: 14px; }
+      canvas { max-height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside>
+      <div class="brand">
+        <small>Private funnel ops</small>
+        <h1>美容院 Marketing Tracker</h1>
+        <p>用匿名 Lead ID 跑通由查詢、預約、到店、成交到復盤嘅一人 agency 工作流。</p>
+      </div>
+      <nav aria-label="頁面導覽">
+        <a href="#dashboard">總覽 <span>01</span></a>
+        <a href="#lead-form">記錄 <span>02</span></a>
+        <a href="#funnel">漏斗 <span>03</span></a>
+        <a href="#charts">圖表 <span>04</span></a>
+        <a href="#content-perf">內容成效 <span>05</span></a>
+        <a href="#lead-table">列表 <span>06</span></a>
+        <a href="#weekly-review">每週復盤 <span>07</span></a>
+        <a href="#ai-workflow">AI workflow <span>08</span></a>
+        <a href="#privacy">私隱邊界 <span>09</span></a>
+      </nav>
+      <div class="side-note">
+        建議每日收工前輸入一次。資料只存在目前瀏覽器，請定期匯出 JSON 備份；交報告就用 CSV。
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <strong>單一 HTML，無 server，無登入</strong>
+          <p>第一版以匿名 lead-level tracking 為核心，避免直接接觸客人身份資料。</p>
+        </div>
+        <div class="toolbar" aria-label="資料操作">
+          <button class="btn secondary" id="seed-sample" type="button">載入示例</button>
+          <button class="btn" id="export-json" type="button">匯出 JSON</button>
+          <label class="file-button">匯入 JSON<input id="import-json" type="file" accept="application/json,.json"></label>
+          <button class="btn blue" id="export-csv" type="button">匯出 CSV</button>
+          <label class="file-button">匯入 CSV<input id="import-csv" type="file" accept=".csv,text/csv"></label>
+          <button class="btn warning" id="reset-data" type="button">清空資料</button>
+        </div>
+      </div>
+
+      <section id="dashboard" aria-labelledby="dashboard-title">
+        <div class="section-head">
+          <div>
+            <h2 id="dashboard-title">營運總覽</h2>
+            <p>先睇量，再睇轉化率，最後睇最大流失位。</p>
+          </div>
+        </div>
+        <div class="grid-4">
+          <div class="metric"><span>總查詢</span><strong id="metric-leads">0</strong><em>所有匿名 lead 記錄</em></div>
+          <div class="metric"><span>預約率</span><strong id="metric-booking-rate">0%</strong><em>已預約或之後狀態 / 查詢</em></div>
+          <div class="metric"><span>成交率</span><strong id="metric-close-rate">0%</strong><em>已成交 / 已到店或之後狀態</em></div>
+          <div class="metric"><span>成交金額</span><strong id="metric-revenue">$0</strong><em>已成交 lead 金額總和</em></div>
+        </div>
+      </section>
+
+      <div class="two-col">
+        <section id="lead-form" aria-labelledby="lead-form-title">
+          <div class="section-head">
+            <div>
+              <h2 id="lead-form-title">新增 Lead 記錄</h2>
+              <p>只記錄 marketing 需要嘅狀態資料。Lead ID 可以對應美容院內部 CRM，但呢個檔案唔放身份資料。</p>
+            </div>
+          </div>
+          <form id="lead-entry-form" autocomplete="off">
+            <div class="form-grid">
+              <label>Lead ID
+                <input id="lead-id" name="leadId" placeholder="L20260624-001">
+              </label>
+              <label>日期
+                <input id="lead-date" name="date" type="date">
+              </label>
+              <label>來源
+                <select id="lead-source" name="source">
+                  <option>Instagram organic</option>
+                  <option>Meta Ads</option>
+                  <option>Google Search</option>
+                  <option>Google Map</option>
+                  <option>小紅書</option>
+                  <option>朋友介紹</option>
+                  <option>Walk-in</option>
+                </select>
+              </label>
+              <label>療程興趣
+                <select id="lead-service" name="service">
+                  <option>面部護理</option>
+                  <option>暗瘡管理</option>
+                  <option>抗衰老</option>
+                  <option>脫毛</option>
+                  <option>瘦面/輪廓</option>
+                  <option>皮膚分析</option>
+                </select>
+              </label>
+              <label>狀態
+                <select id="lead-status" name="status">
+                  <option>新查詢</option>
+                  <option>未回覆</option>
+                  <option>已預約</option>
+                  <option>已到店</option>
+                  <option>已成交</option>
+                  <option>已流失</option>
+                  <option>已回訪</option>
+                </select>
+              </label>
+              <label>成交金額
+                <input id="lead-amount" name="amount" type="number" min="0" step="1" placeholder="0">
+              </label>
+              <label>跟進次數
+                <input id="lead-followups" name="followups" type="number" min="0" step="1" value="0">
+              </label>
+              <label>流失原因
+                <select id="lead-loss" name="lossReason">
+                  <option value="">未流失 / 不適用</option>
+                  <option>價錢顧慮</option>
+                  <option>時間不合</option>
+                  <option>未回覆</option>
+                  <option>不信任效果</option>
+                  <option>療程不適合</option>
+                  <option>去了競爭對手</option>
+                </select>
+              </label>
+              <label class="full">備註
+                <textarea id="lead-note" name="note" placeholder="例如：想星期日，但店舖無位。唔好輸入客人全名、電話、完整對話或相片。"></textarea>
+              </label>
+            </div>
+            <div class="toolbar" style="margin-top:12px">
+              <button class="btn" type="submit">加入記錄</button>
+              <button class="btn secondary" type="button" id="auto-id">產生 Lead ID</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="privacy" aria-labelledby="privacy-title">
+          <div class="section-head">
+            <div>
+              <h2 id="privacy-title">私隱邊界</h2>
+              <p>做到專業 tracking，但唔需要把敏感客戶資料交俾 AI。</p>
+            </div>
+          </div>
+          <div class="privacy-rail">
+            <strong>匿名原則</strong>
+            <div>用 Lead ID、來源、狀態、療程、金額、流失原因已足夠分析 funnel。唔好輸入客人全名、電話、完整對話或相片。</div>
+          </div>
+          <ul class="steps" style="margin-top:12px">
+            <li><strong>可以記錄：</strong>來源、日期、狀態、療程興趣、成交金額、流失原因、跟進次數。</li>
+            <li><strong>避免記錄：</strong>電話、身份證、完整 WhatsApp 對話、before/after 相、詳細健康資料。</li>
+            <li><strong>合理權限：</strong>你最好只接觸匿名 lead-level 資料；美容院自己保留身份資料同原始對話。</li>
+          </ul>
+        </section>
+      </div>
+
+      <section id="funnel" aria-labelledby="funnel-title">
+        <div class="section-head">
+          <div>
+            <h2 id="funnel-title">Funnel 圖像化</h2>
+            <p>用查詢、預約、到店、成交四層睇邊一段漏水。</p>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="funnel-canvas" width="1100" height="330" aria-label="營銷漏斗圖"></canvas>
+          <div class="notice" id="bottleneck-note">未有足夠資料。先載入示例或新增 lead。</div>
+        </div>
+      </section>
+
+      <section id="charts" aria-labelledby="charts-title">
+        <div class="section-head">
+          <div>
+            <h2 id="charts-title">渠道與療程成效</h2>
+            <p>唔只睇邊度最多查詢，要睇邊度最容易成交。</p>
+          </div>
+        </div>
+        <div class="chart-grid">
+          <canvas id="channel-canvas" width="720" height="330" aria-label="渠道成效圖"></canvas>
+          <canvas id="service-canvas" width="720" height="330" aria-label="療程成效圖"></canvas>
+        </div>
+      </section>
+
+      <section id="content-perf" aria-labelledby="content-perf-title">
+        <div class="section-head">
+          <div>
+            <h2 id="content-perf-title">內容成效</h2>
+            <p>記低每條出街內容帶到幾多 DM、預約、成交。睇邊條真係帶客，唔係睇邊條多 like。</p>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="export-content-json" type="button">匯出內容 JSON</button>
+            <label class="file-button">匯入內容 JSON<input id="import-content-json" type="file" accept="application/json,.json"></label>
+            <button class="btn blue" id="export-content-csv" type="button">匯出內容 CSV</button>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-bottom:14px">
+          <div class="metric"><span>內容數</span><strong id="metric-content-count">0</strong><em>已記錄出街內容</em></div>
+          <div class="metric"><span>總 DM 關鍵字</span><strong id="metric-content-dm">0</strong><em>內容帶到嘅 DM</em></div>
+          <div class="metric"><span>免費分析預約</span><strong id="metric-content-booking">0</strong><em>由內容帶到</em></div>
+          <div class="metric"><span>帶來成交額</span><strong id="metric-content-revenue">$0</strong><em>內容歸因成交</em></div>
+        </div>
+        <form id="content-entry-form" autocomplete="off" style="margin-bottom:14px">
+          <div class="form-grid">
+            <label>日期<input id="c-date" name="date" type="date"></label>
+            <label>格式
+              <select id="c-format" name="format">
+                <option>Reel</option><option>Carousel</option><option>Stories</option>
+              </select>
+            </label>
+            <label>痛點主題<input id="c-topic" name="topic" placeholder="鬆弛 / 暗啞 / 色斑"></label>
+            <label>Hook<input id="c-hook" name="hook" placeholder="開場第一句"></label>
+            <label>Reach<input id="c-reach" name="reach" type="number" min="0" step="1" placeholder="0"></label>
+            <label>完播 / retention %<input id="c-retention" name="retention" type="number" min="0" max="100" step="1" placeholder="0"></label>
+            <label>Shares<input id="c-shares" name="shares" type="number" min="0" step="1" placeholder="0"></label>
+            <label>Saves<input id="c-saves" name="saves" type="number" min="0" step="1" placeholder="0"></label>
+            <label>Comments<input id="c-comments" name="comments" type="number" min="0" step="1" placeholder="0"></label>
+            <label>DM 關鍵字數<input id="c-dm" name="dm" type="number" min="0" step="1" placeholder="0"></label>
+            <label>WhatsApp clicks<input id="c-wa" name="waClicks" type="number" min="0" step="1" placeholder="0"></label>
+            <label>免費分析預約<input id="c-booking" name="booking" type="number" min="0" step="1" placeholder="0"></label>
+            <label>到店<input id="c-visit" name="visit" type="number" min="0" step="1" placeholder="0"></label>
+            <label>成交<input id="c-won" name="won" type="number" min="0" step="1" placeholder="0"></label>
+            <label>成交額<input id="c-revenue" name="revenue" type="number" min="0" step="1" placeholder="0"></label>
+            <label class="full">下次動作<input id="c-action" name="action" placeholder="keep / stop / 改 Hook / 拆成 Reel"></label>
+          </div>
+          <div class="toolbar" style="margin-top:12px">
+            <button class="btn" type="submit">加入內容記錄</button>
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th><th>格式</th><th>主題</th><th>Hook</th><th>Reach</th><th>完播%</th>
+                <th>Shares</th><th>Saves</th><th>DM</th><th>預約</th><th>成交</th><th>成交額</th><th>下次動作</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="content-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="lead-table" aria-labelledby="lead-table-title">
+        <div class="section-head">
+          <div>
+            <h2 id="lead-table-title">Lead 列表</h2>
+            <p>用篩選快速檢查某個渠道、狀態或療程。刪除只影響本機資料。</p>
+          </div>
+        </div>
+        <div class="filters">
+          <input id="search-leads" placeholder="搜尋 Lead ID、來源、療程、備註">
+          <select id="filter-source"><option value="">所有來源</option></select>
+          <select id="filter-service"><option value="">所有療程</option></select>
+          <select id="filter-status"><option value="">所有狀態</option></select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>Lead ID</th>
+                <th>來源</th>
+                <th>療程興趣</th>
+                <th>狀態</th>
+                <th>金額</th>
+                <th>跟進</th>
+                <th>流失原因</th>
+                <th>備註</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="lead-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="weekly-review" aria-labelledby="weekly-title">
+        <div class="section-head">
+          <div>
+            <h2 id="weekly-title">每週復盤</h2>
+            <p>一鍵整理本週結果：最大流失位、最好渠道、下週行動。</p>
+          </div>
+          <button class="btn" id="build-report" type="button">生成每週復盤</button>
+        </div>
+        <div class="report-box" id="weekly-report-output">按「生成每週復盤」後，呢度會出現可直接交俾美容院老闆/店長睇嘅摘要。</div>
+      </section>
+
+      <section id="ai-workflow" aria-labelledby="ai-title">
+        <div class="section-head">
+          <div>
+            <h2 id="ai-title">Automatic Agentic AI Workflow</h2>
+            <p>先做人手確認，再交俾 AI 分析匿名摘要。唔建議第一版自動發 WhatsApp 或自動改廣告。</p>
+          </div>
+          <button class="btn blue" id="copy-ai-prompt" type="button">複製 AI prompt</button>
+        </div>
+        <div class="agent-grid">
+          <div class="agent-card"><strong>Codex</strong>建 tracker、改 HTML、做匯入匯出、修 bug、加圖表。</div>
+          <div class="agent-card"><strong>Cursor</strong>日常細改 UI、欄位、文字、篩選，同你邊用邊調。</div>
+          <div class="agent-card"><strong>Claude Code</strong>寫 WhatsApp 模板、復盤建議、內容角度、SOP。</div>
+          <div class="agent-card"><strong>Antigravity</strong>派 agent 平行檢查手機版、KPI 公式、CSV、流程 walkthrough。</div>
+        </div>
+        <div class="prompt-box" id="ai-prompt-output" style="margin-top:14px">按上方按鈕會產生一段匿名資料 prompt，你可以貼去 Claude Code / Cursor / Antigravity 做策略分析。</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "beautySalonMarketingTracker.v1";
+    const STATUS_ORDER = ["新查詢", "未回覆", "已預約", "已到店", "已成交", "已回訪", "已流失"];
+    const FUNNEL_STEPS = [
+      { label: "查詢", statuses: ["新查詢", "未回覆", "已預約", "已到店", "已成交", "已回訪", "已流失"] },
+      { label: "預約", statuses: ["已預約", "已到店", "已成交", "已回訪"] },
+      { label: "到店", statuses: ["已到店", "已成交", "已回訪"] },
+      { label: "成交", statuses: ["已成交", "已回訪"] }
+    ];
+    const CONTENT_KEY = "beautySalonMarketingTracker.content.v1";
+    const SHARED_CONTEXT_KEY = "jessi-shared-context";
+    let leads = loadLeads();
+    let contentItems = loadContent();
+
+    function loadContent() {
+      try {
+        const raw = localStorage.getItem(CONTENT_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (error) {
+        console.warn("Unable to load content", error);
+        return [];
+      }
+    }
+
+    function saveContent() {
+      localStorage.setItem(CONTENT_KEY, JSON.stringify(contentItems));
+    }
+
+    function normalizeContent(input) {
+      return {
+        date: String(input.date || today()).slice(0, 10),
+        format: String(input.format || "Reel").trim(),
+        topic: String(input.topic || "").trim(),
+        hook: String(input.hook || "").trim(),
+        reach: Number(input.reach || 0),
+        retention: Number(input.retention || 0),
+        shares: Number(input.shares || 0),
+        saves: Number(input.saves || 0),
+        comments: Number(input.comments || 0),
+        dm: Number(input.dm || 0),
+        waClicks: Number(input.waClicks || 0),
+        booking: Number(input.booking || 0),
+        visit: Number(input.visit || 0),
+        won: Number(input.won || 0),
+        revenue: Number(input.revenue || 0),
+        action: String(input.action || "").trim()
+      };
+    }
+
+    function addContent(event) {
+      if (event) event.preventDefault();
+      const form = document.getElementById("content-entry-form");
+      const item = normalizeContent(Object.fromEntries(new FormData(form).entries()));
+      contentItems.unshift(item);
+      saveContent();
+      form.reset();
+      document.getElementById("c-date").value = today();
+      renderContent();
+    }
+
+    function renderContent() {
+      const count = contentItems.length;
+      const sum = (key) => contentItems.reduce((total, item) => total + Number(item[key] || 0), 0);
+      document.getElementById("metric-content-count").textContent = count;
+      document.getElementById("metric-content-dm").textContent = sum("dm");
+      document.getElementById("metric-content-booking").textContent = sum("booking");
+      document.getElementById("metric-content-revenue").textContent = money(sum("revenue"));
+      const tbody = document.getElementById("content-rows");
+      tbody.innerHTML = "";
+      if (!count) {
+        tbody.innerHTML = '<tr><td colspan="14">未有內容記錄。出街後記返每條成效，先知邊條真係帶客。</td></tr>';
+        return;
+      }
+      contentItems.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(item.date)}</td>
+          <td>${escapeHtml(item.format)}</td>
+          <td>${escapeHtml(item.topic || "-")}</td>
+          <td>${escapeHtml(item.hook || "-")}</td>
+          <td>${Number(item.reach || 0)}</td>
+          <td>${Number(item.retention || 0)}%</td>
+          <td>${Number(item.shares || 0)}</td>
+          <td>${Number(item.saves || 0)}</td>
+          <td>${Number(item.dm || 0)}</td>
+          <td>${Number(item.booking || 0)}</td>
+          <td>${Number(item.won || 0)}</td>
+          <td>${money(item.revenue || 0)}</td>
+          <td>${escapeHtml(item.action || "-")}</td>
+          <td><div class="mini-actions"><button type="button" data-content-delete="${index}">刪除</button></div></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportContentJson() {
+      downloadFile("jessi-content-performance.json", JSON.stringify({ exportedAt: new Date().toISOString(), content: contentItems }, null, 2), "application/json");
+    }
+
+    function importContentJsonFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result));
+          const rows = Array.isArray(parsed) ? parsed : parsed.content;
+          if (!Array.isArray(rows)) throw new Error("JSON 應該包含 content 陣列。");
+          contentItems = rows.map(normalizeContent);
+          saveContent();
+          renderContent();
+        } catch (error) {
+          alert("內容 JSON 匯入失敗：" + error.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function exportContentCsv() {
+      const headers = ["date", "format", "topic", "hook", "reach", "retention", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue", "action"];
+      const rows = [headers.join(",")].concat(contentItems.map((item) => headers.map((key) => csvCell(item[key])).join(",")));
+      downloadFile("jessi-content-performance.csv", rows.join("\n"), "text/csv;charset=utf-8");
+    }
+
+    function loadLeads() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (error) {
+        console.warn("Unable to load leads", error);
+        return [];
+      }
+    }
+
+    function saveLeads() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+    }
+
+    function normalizeLead(input) {
+      return {
+        id: String(input.id || input.leadId || generateLeadId()).trim(),
+        date: String(input.date || today()).slice(0, 10),
+        source: String(input.source || "Instagram organic").trim(),
+        service: String(input.service || "面部護理").trim(),
+        status: String(input.status || "新查詢").trim(),
+        amount: Number(input.amount || 0),
+        followups: Number(input.followups || 0),
+        lossReason: String(input.lossReason || "").trim(),
+        note: String(input.note || "").trim()
+      };
+    }
+
+    function addLead(event) {
+      if (event) event.preventDefault();
+      const form = document.getElementById("lead-entry-form");
+      const data = new FormData(form);
+      const lead = normalizeLead({
+        leadId: data.get("leadId"),
+        date: data.get("date"),
+        source: data.get("source"),
+        service: data.get("service"),
+        status: data.get("status"),
+        amount: data.get("amount"),
+        followups: data.get("followups"),
+        lossReason: data.get("lossReason"),
+        note: data.get("note")
+      });
+      if (!lead.id) lead.id = generateLeadId();
+      leads.unshift(lead);
+      saveLeads();
+      form.reset();
+      document.getElementById("lead-date").value = today();
+      document.getElementById("lead-id").value = generateLeadId();
+      renderAll();
+    }
+
+    function renderDashboard() {
+      const total = leads.length;
+      const booked = countByStatuses(["已預約", "已到店", "已成交", "已回訪"]);
+      const visited = countByStatuses(["已到店", "已成交", "已回訪"]);
+      const won = countByStatuses(["已成交", "已回訪"]);
+      const revenue = leads.reduce((sum, lead) => sum + (["已成交", "已回訪"].includes(lead.status) ? Number(lead.amount || 0) : 0), 0);
+      document.getElementById("metric-leads").textContent = total;
+      document.getElementById("metric-booking-rate").textContent = percent(booked, total);
+      document.getElementById("metric-close-rate").textContent = percent(won, visited);
+      document.getElementById("metric-revenue").textContent = money(revenue);
+    }
+
+    function renderLeadTable() {
+      const tbody = document.getElementById("lead-rows");
+      const query = document.getElementById("search-leads").value.toLowerCase();
+      const source = document.getElementById("filter-source").value;
+      const service = document.getElementById("filter-service").value;
+      const status = document.getElementById("filter-status").value;
+      const filtered = leads.filter((lead) => {
+        const haystack = [lead.id, lead.date, lead.source, lead.service, lead.status, lead.lossReason, lead.note].join(" ").toLowerCase();
+        return (!query || haystack.includes(query)) &&
+          (!source || lead.source === source) &&
+          (!service || lead.service === service) &&
+          (!status || lead.status === status);
+      });
+
+      tbody.innerHTML = "";
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="10">未有符合條件嘅記錄。</td></tr>';
+        return;
+      }
+
+      filtered.forEach((lead) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(lead.date)}</td>
+          <td>${escapeHtml(lead.id)}</td>
+          <td>${escapeHtml(lead.source)}</td>
+          <td>${escapeHtml(lead.service)}</td>
+          <td><span class="${statusClass(lead.status)}">${escapeHtml(lead.status)}</span></td>
+          <td>${money(lead.amount || 0)}</td>
+          <td>${Number(lead.followups || 0)}</td>
+          <td>${escapeHtml(lead.lossReason || "-")}</td>
+          <td>${escapeHtml(lead.note || "-")}</td>
+          <td><div class="mini-actions"><button type="button" data-edit="${escapeHtml(lead.id)}">套用</button><button type="button" data-delete="${escapeHtml(lead.id)}">刪除</button></div></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function drawFunnel() {
+      const canvas = document.getElementById("funnel-canvas");
+      const ctx = setupCanvas(canvas);
+      const counts = FUNNEL_STEPS.map((step) => ({ label: step.label, value: countByStatuses(step.statuses) }));
+      const max = Math.max(...counts.map((item) => item.value), 1);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawTitle(ctx, "由查詢到成交", "每一層闊度代表人數，留意突然收窄嘅位置。");
+      counts.forEach((item, index) => {
+        const width = 240 + (item.value / max) * 520;
+        const x = (canvas.width - width) / 2;
+        const y = 86 + index * 55;
+        ctx.fillStyle = ["#0f7c69", "#305f9f", "#bd7a13", "#dc6b55"][index];
+        roundRect(ctx, x, y, width, 38, 8);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "700 18px Microsoft JhengHei, sans-serif";
+        ctx.fillText(`${item.label}: ${item.value}`, x + 18, y + 25);
+      });
+      document.getElementById("bottleneck-note").textContent = diagnoseBottleneck(counts);
+    }
+
+    function exportJson() {
+      downloadFile("beauty-salon-leads.json", JSON.stringify({ exportedAt: new Date().toISOString(), leads }, null, 2), "application/json");
+    }
+
+    function importJsonFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result));
+          const rows = Array.isArray(parsed) ? parsed : parsed.leads;
+          if (!Array.isArray(rows)) throw new Error("JSON should contain a leads array.");
+          leads = rows.map(normalizeLead);
+          saveLeads();
+          renderAll();
+        } catch (error) {
+          alert("JSON 匯入失敗：" + error.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function exportCsv() {
+      const headers = ["date", "id", "source", "service", "status", "amount", "followups", "lossReason", "note"];
+      const rows = [headers.join(",")].concat(leads.map((lead) => headers.map((key) => csvCell(lead[key])).join(",")));
+      downloadFile("beauty-salon-leads.csv", rows.join("\n"), "text/csv;charset=utf-8");
+    }
+
+    function importCsvFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const rows = parseCsv(String(reader.result));
+          leads = rows.map(normalizeLead);
+          saveLeads();
+          renderAll();
+        } catch (error) {
+          alert("CSV 匯入失敗：" + error.message);
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function loadSharedWorkflowContext() {
+      try {
+        const raw = localStorage.getItem(SHARED_CONTEXT_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function sharedWeekThemeLine() {
+      const ctx = loadSharedWorkflowContext();
+      const title = ctx?.weekTheme?.title?.trim();
+      return title ? `本週痛點：${title}` : "";
+    }
+
+    function buildWeeklyReport() {
+      const summary = getSummary();
+      const bestChannel = topItem(groupBy("source", true));
+      const bestService = topItem(groupBy("service", true));
+      const loss = topItem(groupBy("lossReason", false));
+      const themeLine = sharedWeekThemeLine();
+      const report = [
+        "美容院每週 Marketing 復盤",
+        "",
+        ...(themeLine ? [themeLine, ""] : []),
+        `總查詢：${summary.total}`,
+        `已預約：${summary.booked}（預約率 ${percent(summary.booked, summary.total)}）`,
+        `已到店：${summary.visited}（到店率 ${percent(summary.visited, summary.booked)}）`,
+        `已成交：${summary.won}（到店成交率 ${percent(summary.won, summary.visited)}）`,
+        `成交金額：${money(summary.revenue)}`,
+        "",
+        `最好渠道：${bestChannel.label}（成交 ${bestChannel.value}）`,
+        `最好療程：${bestService.label}（成交 ${bestService.value}）`,
+        `主要流失原因：${loss.label}（${loss.value}）`,
+        "",
+        "下週建議：",
+        "- 如果查詢少：優先改善內容題目、CTA、profile 入口。",
+        "- 如果查詢多但預約少：檢查 WhatsApp 開場、價格解釋、可預約時段。",
+        "- 如果到店多但成交少：檢查諮詢流程、方案設計、信任證明。",
+        "- 把最好渠道同療程組合成 2 條 Reels、1 篇 Carousel、3 組 Stories。"
+      ].join("\n");
+      document.getElementById("weekly-report-output").textContent = report;
+      return report;
+    }
+
+    function buildAiPrompt() {
+      const summary = getSummary();
+      const themeLine = sharedWeekThemeLine();
+      const prompt = [
+        "你係美容院 marketing 策略顧問。以下係匿名 lead-level tracking 摘要，請唔好要求我提供客人電話、全名、相片或完整對話。",
+        "",
+        "目標：分析 funnel 最大問題，提出下週最值得做嘅 3 個行動，包括內容、WhatsApp 跟進、廣告或到店轉化改善。",
+        "",
+        ...(themeLine ? [themeLine, ""] : []),
+        "總覽：",
+        JSON.stringify(summary, null, 2),
+        "",
+        "按渠道成交：",
+        JSON.stringify(groupBy("source", true), null, 2),
+        "",
+        "按療程成交：",
+        JSON.stringify(groupBy("service", true), null, 2),
+        "",
+        "流失原因：",
+        JSON.stringify(groupBy("lossReason", false), null, 2),
+        "",
+        "請輸出：",
+        "1. 最大瓶頸",
+        "2. 可能原因",
+        "3. 下週 3 個實驗",
+        "4. 需要拍嘅內容清單",
+        "5. WhatsApp 跟進模板"
+      ].join("\n");
+      document.getElementById("ai-prompt-output").textContent = prompt;
+      navigator.clipboard?.writeText(prompt).catch(() => {});
+      return prompt;
+    }
+
+    function renderAll() {
+      renderDashboard();
+      populateFilters();
+      renderLeadTable();
+      drawFunnel();
+      drawBarChart("channel-canvas", "渠道成交數", groupBy("source", true), "#305f9f");
+      drawBarChart("service-canvas", "療程成交數", groupBy("service", true), "#0f7c69");
+      renderContent();
+    }
+
+    function getSummary() {
+      const total = leads.length;
+      const booked = countByStatuses(["已預約", "已到店", "已成交", "已回訪"]);
+      const visited = countByStatuses(["已到店", "已成交", "已回訪"]);
+      const won = countByStatuses(["已成交", "已回訪"]);
+      const revenue = leads.reduce((sum, lead) => sum + (["已成交", "已回訪"].includes(lead.status) ? Number(lead.amount || 0) : 0), 0);
+      return {
+        total,
+        booked,
+        visited,
+        won,
+        lost: countByStatuses(["已流失"]),
+        revenue,
+        bookingRate: percent(booked, total),
+        visitRate: percent(visited, booked),
+        closeRate: percent(won, visited)
+      };
+    }
+
+    function countByStatuses(statuses) {
+      return leads.filter((lead) => statuses.includes(lead.status)).length;
+    }
+
+    function groupBy(field, onlyWon) {
+      const map = {};
+      leads.forEach((lead) => {
+        if (onlyWon && !["已成交", "已回訪"].includes(lead.status)) return;
+        const key = lead[field] || "未分類";
+        if (!key || key === "未流失 / 不適用") return;
+        map[key] = (map[key] || 0) + 1;
+      });
+      return Object.entries(map)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    function topItem(items) {
+      return items[0] || { label: "未有資料", value: 0 };
+    }
+
+    function diagnoseBottleneck(counts) {
+      if (!leads.length) return "未有足夠資料。先載入示例或新增 lead。";
+      const [inquiry, booking, visit, sale] = counts.map((item) => item.value);
+      const bookingRate = booking / Math.max(inquiry, 1);
+      const visitRate = visit / Math.max(booking, 1);
+      const closeRate = sale / Math.max(visit, 1);
+      if (bookingRate < .35) return "最大流失位似乎係查詢到預約：優先檢查 WhatsApp 開場、offer、價錢解釋同可預約時段。";
+      if (visitRate < .65) return "最大流失位似乎係預約到到店：優先檢查到店前提醒、地點資訊、改期流程。";
+      if (closeRate < .45) return "最大流失位似乎係到店到成交：優先檢查諮詢流程、方案設計、案例證明。";
+      return "漏斗暫時健康：下週可集中放大最好渠道與最好療程。";
+    }
+
+    function drawBarChart(canvasId, title, rows, color) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = setupCanvas(canvas);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawTitle(ctx, title, rows.length ? "數字代表已成交或已回訪 lead。" : "未有成交資料。");
+      const max = Math.max(...rows.map((row) => row.value), 1);
+      rows.slice(0, 7).forEach((row, index) => {
+        const y = 82 + index * 32;
+        const barWidth = (canvas.width - 260) * row.value / max;
+        ctx.fillStyle = "#34434d";
+        ctx.font = "14px Microsoft JhengHei, sans-serif";
+        ctx.fillText(row.label.slice(0, 16), 24, y + 18);
+        ctx.fillStyle = color;
+        roundRect(ctx, 190, y, Math.max(barWidth, 6), 20, 6);
+        ctx.fill();
+        ctx.fillStyle = "#172026";
+        ctx.fillText(String(row.value), 202 + barWidth, y + 16);
+      });
+    }
+
+    function setupCanvas(canvas) {
+      const ratio = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(600, Math.floor(rect.width * ratio));
+      canvas.height = Math.floor(rect.height * ratio);
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      return canvas.getContext("2d");
+    }
+
+    function drawTitle(ctx, title, subtitle) {
+      ctx.fillStyle = "#172026";
+      ctx.font = "700 20px Microsoft JhengHei, sans-serif";
+      ctx.fillText(title, 24, 34);
+      ctx.fillStyle = "#62707a";
+      ctx.font = "14px Microsoft JhengHei, sans-serif";
+      ctx.fillText(subtitle, 24, 58);
+    }
+
+    function populateFilters() {
+      populateSelect("filter-source", unique("source"));
+      populateSelect("filter-service", unique("service"));
+      populateSelect("filter-status", STATUS_ORDER);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      const current = select.value;
+      const first = select.options[0].textContent;
+      select.innerHTML = `<option value="">${first}</option>` + values.map((value) => `<option>${escapeHtml(value)}</option>`).join("");
+      select.value = current;
+    }
+
+    function unique(field) {
+      return Array.from(new Set(leads.map((lead) => lead[field]).filter(Boolean))).sort();
+    }
+
+    function generateLeadId() {
+      const compact = today().replaceAll("-", "");
+      const next = String(leads.length + 1).padStart(3, "0");
+      return `L${compact}-${next}`;
+    }
+
+    function today() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function percent(part, total) {
+      if (!total) return "0%";
+      return Math.round((part / total) * 100) + "%";
+    }
+
+    function money(value) {
+      return "$" + Number(value || 0).toLocaleString("en-HK");
+    }
+
+    function statusClass(status) {
+      if (status === "已流失") return "status-pill lost";
+      if (status === "未回覆") return "status-pill waiting";
+      if (status === "已成交" || status === "已回訪") return "status-pill won";
+      return "status-pill";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[char]);
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+    }
+
+    function parseCsv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return [];
+      const headers = splitCsvLine(lines[0]);
+      return lines.slice(1).filter(Boolean).map((line) => {
+        const cells = splitCsvLine(line);
+        return headers.reduce((row, header, index) => {
+          row[header] = cells[index] || "";
+          return row;
+        }, {});
+      });
+    }
+
+    function splitCsvLine(line) {
+      const cells = [];
+      let current = "";
+      let quoted = false;
+      for (let index = 0; index < line.length; index += 1) {
+        const char = line[index];
+        const next = line[index + 1];
+        if (char === '"' && quoted && next === '"') {
+          current += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          cells.push(current);
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      cells.push(current);
+      return cells;
+    }
+
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
+      ctx.closePath();
+    }
+
+    function loadSampleData() {
+      leads = [
+        { id: "L20260617-001", date: "2026-06-17", source: "Instagram organic", service: "抗衰老", status: "已成交", amount: 3800, followups: 2, lossReason: "", note: "內容主題：輪廓模糊" },
+        { id: "L20260617-002", date: "2026-06-17", source: "Meta Ads", service: "皮膚分析", status: "已預約", amount: 0, followups: 1, lossReason: "", note: "首次免費分析" },
+        { id: "L20260618-003", date: "2026-06-18", source: "Google Search", service: "暗瘡管理", status: "已到店", amount: 0, followups: 2, lossReason: "", note: "比較療程期數" },
+        { id: "L20260618-004", date: "2026-06-18", source: "小紅書", service: "面部護理", status: "已流失", amount: 0, followups: 2, lossReason: "價錢顧慮", note: "要求再平啲" },
+        { id: "L20260619-005", date: "2026-06-19", source: "朋友介紹", service: "脫毛", status: "已成交", amount: 2200, followups: 1, lossReason: "", note: "朋友介紹信任度高" },
+        { id: "L20260620-006", date: "2026-06-20", source: "Google Map", service: "面部護理", status: "未回覆", amount: 0, followups: 1, lossReason: "未回覆", note: "已發第二次 follow-up" },
+        { id: "L20260621-007", date: "2026-06-21", source: "Instagram organic", service: "抗衰老", status: "已回訪", amount: 5200, followups: 3, lossReason: "", note: "由案例 carousel 來" },
+        { id: "L20260622-008", date: "2026-06-22", source: "Meta Ads", service: "瘦面/輪廓", status: "已流失", amount: 0, followups: 1, lossReason: "時間不合", note: "只得星期日晚上" }
+      ];
+      saveLeads();
+      renderAll();
+    }
+
+    document.getElementById("lead-entry-form").addEventListener("submit", addLead);
+    document.getElementById("auto-id").addEventListener("click", () => {
+      document.getElementById("lead-id").value = generateLeadId();
+    });
+    document.getElementById("export-json").addEventListener("click", exportJson);
+    document.getElementById("import-json").addEventListener("change", importJsonFile);
+    document.getElementById("export-csv").addEventListener("click", exportCsv);
+    document.getElementById("import-csv").addEventListener("change", importCsvFile);
+    document.getElementById("seed-sample").addEventListener("click", loadSampleData);
+    document.getElementById("reset-data").addEventListener("click", () => {
+      if (confirm("確定清空本機所有 tracker 資料？")) {
+        leads = [];
+        saveLeads();
+        renderAll();
+      }
+    });
+    document.getElementById("build-report").addEventListener("click", buildWeeklyReport);
+    document.getElementById("copy-ai-prompt").addEventListener("click", buildAiPrompt);
+    ["search-leads", "filter-source", "filter-service", "filter-status"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", renderLeadTable);
+      document.getElementById(id).addEventListener("change", renderLeadTable);
+    });
+    document.getElementById("lead-rows").addEventListener("click", (event) => {
+      const deleteId = event.target.getAttribute("data-delete");
+      const editId = event.target.getAttribute("data-edit");
+      if (deleteId) {
+        leads = leads.filter((lead) => lead.id !== deleteId);
+        saveLeads();
+        renderAll();
+      }
+      if (editId) {
+        const lead = leads.find((item) => item.id === editId);
+        if (!lead) return;
+        document.getElementById("lead-id").value = lead.id;
+        document.getElementById("lead-date").value = lead.date;
+        document.getElementById("lead-source").value = lead.source;
+        document.getElementById("lead-service").value = lead.service;
+        document.getElementById("lead-status").value = lead.status;
+        document.getElementById("lead-amount").value = lead.amount;
+        document.getElementById("lead-followups").value = lead.followups;
+        document.getElementById("lead-loss").value = lead.lossReason;
+        document.getElementById("lead-note").value = lead.note;
+        leads = leads.filter((item) => item.id !== editId);
+        saveLeads();
+        renderAll();
+        document.getElementById("lead-form").scrollIntoView({ behavior: "smooth" });
+      }
+    });
+    document.getElementById("content-entry-form").addEventListener("submit", addContent);
+    document.getElementById("export-content-json").addEventListener("click", exportContentJson);
+    document.getElementById("import-content-json").addEventListener("change", importContentJsonFile);
+    document.getElementById("export-content-csv").addEventListener("click", exportContentCsv);
+    document.getElementById("content-rows").addEventListener("click", (event) => {
+      const deleteIndex = event.target.getAttribute("data-content-delete");
+      if (deleteIndex !== null) {
+        contentItems.splice(Number(deleteIndex), 1);
+        saveContent();
+        renderContent();
+      }
+    });
+    window.addEventListener("resize", renderAll);
+    document.getElementById("lead-date").value = today();
+    document.getElementById("lead-id").value = generateLeadId();
+    document.getElementById("c-date").value = today();
+    const sharedCtx = loadSharedWorkflowContext();
+    if (sharedCtx?.weekTheme?.title && document.getElementById("weekly-review")) {
+      const themeLine = `本週痛點（來自 workflow）：${sharedCtx.weekTheme.title}`;
+      const out = document.getElementById("weekly-report-output");
+      if (out && !out.textContent.trim()) out.textContent = themeLine + "\n\n按「生成每週復盤」整合 tracker 數據。";
+    }
+    renderAll();
+  </script>
+</body>
+</html>

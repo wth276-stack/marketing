@@ -1,0 +1,18 @@
+{
+  "name": "Jessi Beauty Academy · 完整營運流程",
+  "short_name": "Jessi Workflow",
+  "description": "外判 marketing × 店內配合完整營運流程",
+  "start_url": "./jessi-beauty-marketing-workflow.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff5f8",
+  "theme_color": "#c96b8a",
+  "icons": [
+    {
+      "src": "assets/jessi-beauty-academy-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

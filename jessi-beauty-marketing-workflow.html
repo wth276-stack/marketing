@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#c96b8a">
+  <title>Jessi Beauty Academy · 完整營運流程</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/jessi-workflow.css">
+</head>
+<body>
+  <div class="mobile-bar">
+    <a href="#today" aria-label="Jessi Beauty Academy">
+      <img src="assets/jessi-beauty-academy-logo.svg" alt="Jessi Beauty Academy" class="mobile-logo" width="160" height="48">
+    </a>
+    <button type="button" class="secondary salon-view-toggle" id="salon-view-toggle-mobile" aria-pressed="false">店內模式</button>
+    <button type="button" class="secondary" id="menu-toggle" aria-expanded="false">選單</button>
+  </div>
+
+  <div class="app-shell">
+    <aside id="sidebar">
+      <div class="brand">
+        <a href="#today" class="brand-logo-wrap" aria-label="Jessi Beauty Academy — 返回今日做咩">
+          <img src="assets/jessi-beauty-academy-logo.svg" alt="Jessi Beauty Academy" class="brand-logo" width="210" height="76">
+        </a>
+        <p class="brand-tagline">完整營運流程<br>外判 marketing × 店內配合</p>
+      </div>
+      <nav aria-label="流程章節">
+        <p class="nav-label">每日</p>
+        <a href="#today" data-marketer-only>今日做咩</a>
+        <a href="#month-schedule" data-marketer-only>月曆總覽</a>
+        <a href="#week-progress">本週進度</a>
+        <p class="nav-label" data-marketer-only>策略 & 內容</p>
+        <a href="#marketing-hub" data-marketer-only>營銷工作台</a>
+        <a href="#phase-guide" data-phase-nav="1" data-marketer-only>Phase 1 引導</a>
+        <a href="#themes" data-phase-nav="2" data-marketer-only>主題發掘</a>
+        <a href="#content-matrix" data-phase-nav="2" data-marketer-only>100 題矩陣</a>
+        <p class="nav-label salon-nav-label" hidden>店內參考</p>
+        <a href="#weekly" data-marketer-only>每週日程</a>
+        <a href="#daily" id="nav-daily-dock" data-marketer-only>每日 Checklist ↗</a>
+        <a href="#reference-hub" data-marketer-only>工具箱</a>
+        <a href="#weekly-report-template">↳ 週報模板</a>
+        <a href="#dm">↳ DM 話術</a>
+        <a href="#contacts">↳ 對接人</a>
+        <a href="#templates" data-marketer-only>↳ 複製模板</a>
+        <a href="#phase0" data-marketer-only>Phase 0（一次性）</a>
+      </nav>
+      <div class="side-links">
+        <strong>配套工具</strong><br>
+        <a href="beauty-salon-marketing-tracker.html" target="_blank" rel="noopener">Marketing Tracker</a><br>
+        <a href="instagram美容院營運實戰手冊.html" target="_blank" rel="noopener">IG 營運實戰手冊</a><br>
+        詳細 md：行動計劃、每月時間表、客戶配合流程
+      </div>
+    </aside>
+
+    <main>
+      <div class="sticky-controls">
+      <div class="topbar" id="today">
+        <div class="topbar-main">
+          <div class="topbar-info">
+            <strong id="today-title">今日做咩</strong>
+            <p id="today-sub">載入中…</p>
+          </div>
+          <div class="phase-switch" role="group" aria-label="營運階段">
+            <span>揀階段</span>
+            <button type="button" class="phase-btn" data-phase="1">Phase 1 · 第一個月</button>
+            <button type="button" class="phase-btn active" data-phase="2">Phase 2 · 常態</button>
+          </div>
+          <div class="pill-row">
+            <button type="button" class="secondary salon-view-toggle" id="salon-view-toggle" aria-pressed="false">店內模式</button>
+            <span class="pill" id="phase-pill">Phase 2</span>
+            <span class="pill blue" id="week-pill">本週痛點</span>
+            <span class="pill warn" id="shoot-pill">拍攝週</span>
+            <a class="pill blue" href="beauty-salon-marketing-tracker.html#weekly-review" target="_blank" rel="noopener" id="tracker-pill-link" style="text-decoration:none">Tracker 週報 ↗</a>
+          </div>
+        </div>
+        <div class="topbar-progress" id="topbar-progress">
+          <div class="topbar-progress-row">
+            <span class="topbar-progress-label">今日</span>
+            <div class="progress-track progress-track-sm you-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="wp-today-pct"><div id="wp-bar-today" style="width:0%"></div></div>
+            <span class="topbar-progress-pct" id="wp-today-pct">0%</span>
+          </div>
+          <div class="topbar-progress-row">
+            <span class="topbar-progress-label">本週</span>
+            <div class="progress-track progress-track-sm" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="wp-week-pct-mini"><div id="wp-bar-week-mini" style="width:0%"></div></div>
+            <span class="topbar-progress-pct" id="wp-week-pct-mini">0%</span>
+          </div>
+        </div>
+      </div><!-- /sticky-controls -->
+
+      <section id="month-schedule" aria-labelledby="month-schedule-title">
+        <div class="section-head">
+          <h2 id="month-schedule-title">月曆總覽</h2>
+          <p>一整個月應做工序 — 紫色＝拍攝週、紅色＝店休／公眾假期。右邊處理改期同聽日準備。</p>
+        </div>
+
+        <div class="theme-bar" id="theme-bar">
+          <div class="theme-bar-row">
+            <label>本週痛點（一個問題／場景）
+              <input type="text" id="month-theme-title" placeholder="例：影相明明冇肥，但下顎線愈嚟愈唔見">
+              <div id="month-theme-repeat-warn" class="theme-repeat-warn" hidden></div>
+            </label>
+            <label class="m1-week-label phase-1-only">M1 週次
+              <select id="m1-week-num">
+                <option value="">W?</option>
+                <option value="1">W1</option>
+                <option value="2">W2</option>
+                <option value="3">W3</option>
+                <option value="4">W4</option>
+              </select>
+            </label>
+          </div>
+          <label class="phase-2-only">本週角度／關鍵字備註（可選）
+            <input type="text" id="month-theme-note" placeholder="例：迷思破解 + 案例分析；關鍵字＝輪廓">
+          </label>
+          <details class="legend-fold">
+            <summary>痛點同角度點填？</summary>
+            <p class="theme-bar-note" id="theme-bar-hint">痛點＝一個受眾問題；角度＝點樣拆內容。填好後月曆同頂部 pill 會顯示。</p>
+          </details>
+        </div>
+
+        <div class="month-head">
+          <div class="month-nav">
+            <button type="button" class="secondary" id="month-prev" aria-label="上個月">‹</button>
+            <strong id="month-label">—</strong>
+            <button type="button" class="secondary" id="month-next" aria-label="下個月">›</button>
+            <button type="button" class="secondary" id="month-today">今月</button>
+          </div>
+          <details class="legend-fold">
+            <summary>月曆圖例</summary>
+            <div class="month-legend">
+              <span><i class="legend-swatch" style="background:#ebe0ff"></i>拍攝週（二）</span>
+              <span><i class="legend-swatch" style="background:#f6f0ff"></i>拍攝週其他日</span>
+              <span><i class="legend-swatch" style="background:#ffe8ec"></i>公眾假期</span>
+              <span><i class="legend-swatch" style="background:#fff0f2"></i>星期日店休</span>
+            </div>
+          </details>
+        </div>
+
+        <div class="month-layout">
+          <div class="month-calendar-wrap">
+            <div class="month-cal-head">
+              <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+            </div>
+            <div class="month-cal-grid" id="month-cal-grid" aria-label="月曆"></div>
+          </div>
+          <div class="month-side">
+            <div class="month-side-panel" id="pending-panel">
+              <h3>待溝通／安排事項</h3>
+              <p class="side-hint">公眾假期撞正重要工序（尤其拍攝日）會自動列出；勾選＝已改期或已溝通。</p>
+              <ul class="pending-list" id="pending-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="week-progress" aria-labelledby="week-progress-title">
+        <div class="section-head">
+          <h2 id="week-progress-title">本週完成進度表</h2>
+          <p id="week-progress-range">載入中…</p>
+        </div>
+
+        <details class="tools-prep-panel" id="tools-prep-panel">
+          <summary>
+            <span>工具準備清單</span>
+            <span class="tools-prep-pct" id="tools-prep-pct">0/0</span>
+          </summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint">拍攝週前／星期一開工前 check — 器材、帳號、常用檔案 ready 先開工。剔咗會記住，唔使每週重填。</p>
+            <p class="tools-prep-group">器材（拍攝前）</p>
+            <ul class="checklist" data-store="tools-prep">
+              <li><input type="checkbox" id="tp-a1-1"><label for="tp-a1-1">手機清潔鏡頭；影片 1080p/4K 設定</label></li>
+              <li><input type="checkbox" id="tp-a1-2"><label for="tp-a1-2">三腳架／手機夾</label></li>
+              <li><input type="checkbox" id="tp-a1-3"><label for="tp-a1-3">補光（環形燈或自然光位）</label></li>
+              <li><input type="checkbox" id="tp-a1-4"><label for="tp-a1-4">收音（安靜房／細咪）</label></li>
+              <li><input type="checkbox" id="tp-a1-5"><label for="tp-a1-5">場地 3 位：接待／分析房／儀器位</label></li>
+              <li><input type="checkbox" id="tp-a1-6"><label for="tp-a1-6">老闆造型準備（拍攝週）</label></li>
+            </ul>
+            <p class="tools-prep-group">帳號／軟件</p>
+            <ul class="checklist" data-store="tools-prep">
+              <li><input type="checkbox" id="tp-a2-1"><label for="tp-a2-1">IG 專業帳號（Business）</label></li>
+              <li><input type="checkbox" id="tp-a2-2"><label for="tp-a2-2">Meta Business Suite 可排程</label></li>
+              <li><input type="checkbox" id="tp-a2-3"><label for="tp-a2-3">Canva 帳號 + 品牌模板</label></li>
+              <li><input type="checkbox" id="tp-a2-4"><label for="tp-a2-4">tracker 書籤</label></li>
+              <li><input type="checkbox" id="tp-a2-5"><label for="tp-a2-5">workflow 書籤（本頁）</label></li>
+            </ul>
+            <p class="tools-prep-group">檔案／本週常用</p>
+            <ul class="checklist" data-store="tools-prep">
+              <li><input type="checkbox" id="tp-w1"><label for="tp-w1">內容日程 / Prompt 包 已開</label></li>
+              <li><input type="checkbox" id="tp-w2"><label for="tp-w2">營運 SOP 話術（DM 用）</label></li>
+              <li><input type="checkbox" id="tp-w3"><label for="tp-w3">DM auto-reply 測試過</label></li>
+              <li><input type="checkbox" id="tp-w4"><label for="tp-w4">客人同意書（見證／對比相）</label></li>
+              <li><input type="checkbox" id="tp-w5"><label for="tp-w5">品牌知識庫（禁語／自測問題）</label></li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="daily-prep-panel-wp" open>
+          <summary>
+            <span id="daily-prep-summary-label">今晚準備（聽日 SOP）</span>
+            <span class="tools-prep-pct" id="daily-prep-pct">0/0</span>
+          </summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint" id="daily-prep-hint">每日做好聽日準備 — 星期日準備星期一復盤、主題、腳本。</p>
+            <p class="prep-title" id="daily-prep-title">—</p>
+            <ul class="prep-list checklist" id="daily-prep-list"></ul>
+          </div>
+        </details>
+
+        <div class="week-progress-summary">
+          <div class="progress-block progress-week">
+            <div class="progress-label">
+              <span>本週總進度</span>
+              <span id="wp-pct-all-label">0% · 0/0 項</span>
+            </div>
+            <div class="progress-track progress-track-lg" id="wp-track-all" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="本週總進度">
+              <div id="wp-bar-all" style="width:0%"></div>
+            </div>
+            <div class="progress-pct-big" id="wp-pct-all">0%</div>
+            <div class="progress-split-row">
+              <div class="progress-split-item">
+                <div class="progress-split-head you"><span>你</span><span id="wp-you-stat">0/0</span></div>
+                <div class="progress-split-bar">
+                  <div class="progress-track progress-track-sm you-bar"><div id="wp-bar-you" style="width:0%"></div></div>
+                  <span class="topbar-progress-pct" id="wp-you-pct">0%</span>
+                </div>
+              </div>
+              <div class="progress-split-item">
+                <div class="progress-split-head salon"><span>店內</span><span id="wp-salon-stat">0/0</span></div>
+                <div class="progress-split-bar">
+                  <div class="progress-track progress-track-sm salon-bar"><div id="wp-bar-salon" style="width:0%"></div></div>
+                  <span class="topbar-progress-pct" id="wp-salon-pct">0%</span>
+                </div>
+              </div>
+            </div>
+            <div class="week-progress-split">
+              <span style="color:var(--muted);font-weight:600" id="wp-done-stat">未完成</span>
+            </div>
+            <details class="tools-prep-panel nested" id="week-chart-panel">
+              <summary>
+                <span>每日進度柱形圖</span>
+                <span class="tools-prep-pct">一至日</span>
+              </summary>
+              <div class="tools-prep-body" style="padding-top:0">
+                <div class="week-day-strip" id="week-day-strip" aria-label="每日進度"></div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <details class="tools-prep-panel" id="week-days-panel" open>
+          <summary>
+            <span>本週每日工序</span>
+            <span class="tools-prep-pct" id="week-days-pct">0/0</span>
+          </summary>
+          <div class="tools-prep-body" style="padding-top:0">
+            <div class="week-progress-grid" id="week-progress-grid" aria-live="polite"></div>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="holiday-panel">
+          <summary>
+            <span>店休日設定</span>
+            <span class="tools-prep-pct" id="holiday-count-badge">0 日</span>
+          </summary>
+          <div class="tools-prep-body">
+            <label class="shoot-anchor-inline">拍攝週起計日（隔週二）
+              <input type="date" id="shoot-anchor">
+            </label>
+            <p class="holiday-hint">
+              <strong>預載香港公眾假期已自動標記；以下係額外店休日。</strong><br>
+              店鋪休息當日：<strong>店內工序暫停</strong>；<strong>DM 由你回覆</strong>（同星期日一樣）。
+              已排程嘅 Reel/Carousel 照出街；拍攝 / 收數改下一個工作天。
+            </p>
+            <label class="shoot-anchor-inline" style="margin-top:8px">
+              <input type="checkbox" id="hide-preset-holidays"> 隱藏預載公眾假期（只顯示自訂店休）
+            </label>
+            <div class="holiday-alerts" id="holiday-alerts" aria-live="polite"></div>
+            <div class="grid-2">
+              <label style="font-size:13px;font-weight:700">日期
+                <input type="date" id="holiday-date" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;margin-top:4px">
+              </label>
+              <label style="font-size:13px;font-weight:700">備註
+                <input type="text" id="holiday-note" placeholder="例：七一" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;margin-top:4px">
+              </label>
+            </div>
+            <div class="copy-row">
+              <button type="button" id="add-holiday">加入店休日</button>
+            </div>
+            <ul class="holiday-list" id="holiday-list"></ul>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="shoot-multiplex-panel">
+          <summary>
+            <span>拍攝日 · 一魚多吃清單</span>
+            <span class="tools-prep-pct" id="shoot-multiplex-pct">0/0</span>
+          </summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint">拍攝週星期二 — 一次拍攝盡量產出本週 + 下週素材（手冊 Ch.9）。</p>
+            <ul class="checklist" id="shoot-multiplex-list"></ul>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="workflow-backup-panel">
+          <summary>
+            <span>數據備份</span>
+            <span class="tools-prep-pct">JSON</span>
+          </summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint">匯出完整 workflow 狀態（phase、矩陣、進度、店休等）。換 browser 或清 cache 前先備份。</p>
+            <div class="backup-actions">
+              <button type="button" id="export-workflow-json">匯出 JSON</button>
+              <label class="secondary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer">
+                匯入 JSON
+                <input type="file" id="import-workflow-json" accept=".json" hidden>
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <div class="copy-row" style="margin-top:14px">
+          <button type="button" class="secondary" id="reset-week-progress">重設本週進度</button>
+        </div>
+      </section>
+
+      <section id="marketing-hub" aria-labelledby="marketing-hub-title">
+        <div class="section-head">
+          <h2 id="marketing-hub-title">營銷工作台</h2>
+          <p>手冊 Ch.3–14 整合 — 用分頁切換，填一次策略卡，每週走腳本→規劃→出街後→復盤。</p>
+        </div>
+        <nav class="hub-tabs" role="tablist" aria-label="營銷工作台分頁" id="hub-tabs">
+          <button type="button" role="tab" data-hub-tab="strategy" class="active">策略卡</button>
+          <button type="button" role="tab" data-hub-tab="research">受眾原話</button>
+          <button type="button" role="tab" data-hub-tab="studio">腳本工作室</button>
+          <button type="button" role="tab" data-hub-tab="plan">本週規劃</button>
+          <button type="button" role="tab" data-hub-tab="publish">出街後 48hr</button>
+          <button type="button" role="tab" data-hub-tab="review">週日復盤</button>
+        </nav>
+
+        <div id="hub-panel-strategy" class="hub-panel active" role="tabpanel">
+          <div class="hub-panel-head">
+            <h3>一頁式策略卡（Ch.3）</h3>
+            <p>填一次，所有選題同腳本都對齊呢個錨點。</p>
+          </div>
+          <div class="form-grid-2" id="strategy-form"></div>
+        </div>
+
+        <div id="hub-panel-research" class="hub-panel" role="tabpanel" hidden>
+          <div class="hub-panel-head">
+            <h3>受眾研究 · 6 類語句（Ch.4）</h3>
+            <p>記 DM／店內原話 → 一鍵送入 100 題矩陣 Q1–Q10。</p>
+          </div>
+          <div class="research-grid" id="research-grid"></div>
+        </div>
+
+        <div id="hub-panel-studio" class="hub-panel" role="tabpanel" hidden>
+          <div class="hub-panel-head">
+            <h3>腳本工作室（Ch.8）</h3>
+            <p>用本週痛點 + 角度自動出 Hook 同 Carousel 5 頁大綱，撳掣複製。</p>
+          </div>
+          <p class="context-pill" id="studio-context">痛點：（未設定）</p>
+          <div class="studio-toolbar">
+            <button type="button" id="studio-copy-cursor-prompt" disabled>複製 Cursor Prompt</button>
+          </div>
+          <div id="studio-angles-root"></div>
+        </div>
+
+        <div id="hub-panel-plan" class="hub-panel" role="tabpanel" hidden>
+          <div class="hub-panel-head">
+            <h3>本週內容規劃（Ch.6 + Ch.12）</h3>
+            <p>標每條出街內容嘅支柱同漏斗層級；對照目標比例 40/20/15/15/10。</p>
+          </div>
+          <table class="plan-table" id="week-plan-table">
+            <thead><tr><th>出街</th><th>內容支柱</th><th>漏斗層級</th></tr></thead>
+            <tbody id="week-plan-body"></tbody>
+          </table>
+          <h4 style="margin:0 0 8px;font-size:14px">支柱比例（實際 vs 目標）</h4>
+          <div class="mix-bars" id="pillar-mix-bars"></div>
+          <h4 style="margin:16px 0 8px;font-size:14px">CTA 階梯（按星期幾）</h4>
+          <div class="cta-day-grid" id="cta-day-grid"></div>
+        </div>
+
+        <div id="hub-panel-publish" class="hub-panel" role="tabpanel" hidden>
+          <div class="hub-panel-head">
+            <h3>出街後 48 小時（Ch.9）</h3>
+            <p>每條內容出街後 — 回覆、記數、截圖、高意向跟進。</p>
+          </div>
+          <div id="post-publish-root"></div>
+        </div>
+
+        <div id="hub-panel-review" class="hub-panel" role="tabpanel" hidden>
+          <div class="hub-panel-head">
+            <h3>每週復盤 6 題（Ch.14）</h3>
+            <p>星期日做 — 答案餵下週矩陣評分同 backlog。同步本週進度「日」工序。</p>
+          </div>
+          <div id="sunday-review-root"></div>
+        </div>
+      </section>
+
+      <section id="phase-guide" aria-labelledby="phase-guide-title" class="phase-1-only">
+        <div class="section-head">
+          <h2 id="phase-guide-title">Phase 1：第一個月引導</h2>
+          <p>目標係跑順 funnel，唔使諗新題。直接開 <code>第一個月內容日程（W1-W4）.md</code> 抄腳本。</p>
+        </div>
+        <ul class="checklist" data-store="phase1-week">
+          <li><input type="checkbox" id="m1-1"><label for="m1-1">星期一：抄今週 W? 腳本 + shot list</label></li>
+          <li><input type="checkbox" id="m1-2"><label for="m1-2">星期二（隔週）：拍攝半日</label></li>
+          <li><input type="checkbox" id="m1-3"><label for="m1-3">星期三：後製 + 排程</label></li>
+          <li><input type="checkbox" id="m1-4"><label for="m1-4">每日：DM + Lead 交接</label></li>
+          <li><input type="checkbox" id="m1-5"><label for="m1-5">星期五：收 5 個數 + tracker</label></li>
+          <li><input type="checkbox" id="m1-6"><label for="m1-6">4 週後：確認 funnel 行得通 → 轉 Phase 2</label></li>
+        </ul>
+        <div class="phase1-complete-banner" id="phase1-complete-banner" hidden>
+          <span>Phase 1 checklist 完成 — 建議切換 Phase 2 開始主題發掘</span>
+          <div class="copy-row" style="margin:0">
+            <button type="button" id="phase1-switch-btn">切換 Phase 2</button>
+            <button type="button" class="secondary" id="phase1-dismiss-btn">稍後</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="themes" aria-labelledby="themes-title">
+        <div class="section-head phase-2-only">
+          <h2 id="themes-title">主題發掘（Phase 2 核心）</h2>
+          <p>每週揀 <strong>一個痛點</strong>（受眾問題），再用 <strong>內容角度</strong> 拆成 Reel／Carousel。同痛點隔至少 8 週或換新角度。</p>
+        </div>
+
+        <div class="phase-2-only">
+        <details class="tools-prep-panel" id="monday-ritual-panel">
+          <summary>星期一儀式提示（45–90min）</summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint" style="margin:0">Tracker 復盤 → 記低發掘線索 → 揀本週痛點 → 揀本週角度 → Prompt 1–4 → Campaign Brief</p>
+          </div>
+        </details>
+
+        <h3 style="margin:16px 0 8px;font-size:15px">本週痛點 + 角度</h3>
+        <div class="theme-form">
+            <label>痛點（受眾問題，一句）
+            <input type="text" id="week-theme-title" placeholder="例：影相明明冇肥，但下顎線愈嚟愈唔見">
+            <div id="week-theme-repeat-warn" class="theme-repeat-warn" hidden></div>
+          </label>
+          <label>DM 關鍵字
+            <input type="text" id="week-theme-kw" placeholder="輪廓 / 膚質 / 斑 / 分析">
+          </label>
+          <label>本週用邊啲內容角度？（建議 3–5 個，對應 mini-funnel）
+            <div class="angle-grid" id="week-angles-grid" aria-label="本週內容角度"></div>
+          </label>
+          <label>點解揀呢個痛點（數據/原話/店內反饋）
+            <textarea id="week-theme-why" placeholder="例：上週 3 條 DM 都問下顎線；老闆話客人怕假"></textarea>
+          </label>
+        </div>
+
+        <details class="tools-prep-panel" id="theme-backlog-panel">
+          <summary>
+            <span>痛點 backlog（持續累積）</span>
+            <span class="tools-prep-pct" id="backlog-count-badge">0 條</span>
+          </summary>
+          <div class="tools-prep-body">
+            <div class="theme-form">
+              <div class="grid-2">
+                <input type="text" id="new-theme-text" placeholder="新痛點 idea（受眾問題一句）">
+                <select id="new-theme-source">
+                  <option value="DM/留言">DM/留言</option>
+                  <option value="Tracker">Tracker 數據</option>
+                  <option value="店內FAQ">店內 FAQ</option>
+                  <option value="無成交原因">無成交原因</option>
+                  <option value="老闆/美容師">老闆/美容師</option>
+                  <option value="內容成效">內容成效</option>
+                  <option value="自己觀察">自己觀察</option>
+                </select>
+              </div>
+              <button type="button" id="add-theme">加入 backlog</button>
+            </div>
+            <ul class="backlog-list" id="theme-backlog"></ul>
+            <details class="tools-prep-panel nested" id="theme-history-panel" style="margin-top:12px">
+              <summary>
+                <span>痛點使用歷史</span>
+                <span class="tools-prep-pct" id="theme-history-count">0 週</span>
+              </summary>
+              <div class="tools-prep-body" style="padding-top:0">
+                <ul class="theme-history-list" id="theme-history-list"></ul>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="discovery-panel">
+          <summary>每週發掘線索（勾一勾有冇收集）</summary>
+          <div class="tools-prep-body">
+            <ul class="checklist" data-store="discovery-weekly">
+              <li><input type="checkbox" id="disc-1"><label for="disc-1">Tracker：邊條內容 DM 最多？邊條完播/share 高？</label></li>
+              <li><input type="checkbox" id="disc-2"><label for="disc-2">店內：本週 FAQ 3 條 + 無成交原因</label></li>
+              <li><input type="checkbox" id="disc-3"><label for="disc-3">DM：記 2 句客人原話（唔貼去公開 AI）</label></li>
+              <li><input type="checkbox" id="disc-4"><label for="disc-4">老闆/美容師：有冇新觀察或案例角度？</label></li>
+              <li><input type="checkbox" id="disc-5"><label for="disc-5">檢查：本週題有冇同過去 8 週重複？重複就要換角度</label></li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="tools-prep-panel" id="pain-ref-panel">
+          <summary>痛點素材庫（參考用）</summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint" style="margin-top:0">需要時先對應療程方向；主題可以跨痛點、跨療程，以<strong>場景同觀點</strong>為主。</p>
+            <table class="ref-table" style="margin-top:8px">
+              <thead><tr><th>層次</th><th>客人感覺</th><th>可對應方向</th><th>關鍵字</th></tr></thead>
+              <tbody>
+                <tr><td>結構</td><td>鬆弛、輪廓、下顎線</td><td>Focus Dual</td><td>輪廓</td></tr>
+                <tr><td>膚質</td><td>暗啞、乾、妝唔貼</td><td>Jessi Glow / Glaskin</td><td>膚質</td></tr>
+                <tr><td>色素</td><td>斑、膚色不均</td><td>Pico</td><td>斑</td></tr>
+                <tr><td>質感</td><td>毛孔、粗糙</td><td>RF / 煥膚</td><td>毛孔</td></tr>
+                <tr><td>紋理</td><td>細紋、乾紋</td><td>綜合分析先</td><td>分析</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+        </div><!-- /phase-2-only -->
+      </section>
+
+      <section id="content-matrix" aria-labelledby="content-matrix-title" class="phase-2-only">
+        <div class="section-head">
+          <h2 id="content-matrix-title">100 題最快建立法</h2>
+          <p>10 個受眾問題 × 每題 5 個角度 × Reel + Carousel = <strong>100 個內容單位</strong>。用評分排序，優先做高分、製作合理嘅題。</p>
+        </div>
+        <details class="tools-prep-panel" id="matrix-howto-panel">
+          <summary>點用 100 題矩陣</summary>
+          <div class="tools-prep-body">
+            <p class="tools-prep-hint" style="margin:0">填 10 條客人問題 → 每題揀 5 個角度 → 評分 → 展開矩陣勾選完成。最高分題可一鍵設為本週痛點。</p>
+          </div>
+        </details>
+        <div class="matrix-stats" id="matrix-stats" aria-live="polite"></div>
+        <div class="matrix-toolbar">
+          <div class="filter-group" role="group" aria-label="篩選題目">
+            <button type="button" class="active" data-matrix-filter="all">全部</button>
+            <button type="button" data-matrix-filter="filled">已填</button>
+            <button type="button" data-matrix-filter="top">高分優先</button>
+            <button type="button" data-matrix-filter="incomplete">未完成</button>
+          </div>
+          <div class="copy-row" style="margin:0">
+            <button type="button" id="matrix-apply-top">設最高分為痛點</button>
+            <button type="button" class="secondary" id="matrix-expand-all">展開全部</button>
+            <button type="button" class="secondary" id="matrix-collapse-all">收起全部</button>
+          </div>
+        </div>
+        <div class="matrix-rank-wrap">
+          <table class="matrix-rank-table" id="matrix-rank-table" aria-label="題目總覽">
+            <thead>
+              <tr><th>#</th><th>分</th><th>問題</th><th>角度</th><th>完成</th></tr>
+            </thead>
+            <tbody id="matrix-rank-body"></tbody>
+          </table>
+        </div>
+        <div class="matrix-q-list" id="content-matrix-root"></div>
+      </section>
+
+      <section id="phase0" aria-labelledby="phase0-title" class="phase0-wrap">
+        <div class="section-head">
+          <h2 id="phase0-title">Phase 0：一次過設定 + 合作啟動</h2>
+          <p>只做一次。完成後收起 — 日常用頂部 <strong>Phase 1 / Phase 2</strong> 切換。</p>
+        </div>
+        <div id="phase0-complete-msg" hidden>
+          <strong>Phase 0 已完成 ✓</strong><br>
+          而家請用頂部揀：<strong>Phase 1</strong>（第一個月抄內容日程）或 <strong>Phase 2</strong>（常態主題發掘）。
+          <div class="copy-row" style="margin-top:10px">
+            <button type="button" id="goto-today">去今日做咩</button>
+            <button type="button" class="secondary" id="pick-phase1">切換 Phase 1</button>
+            <button type="button" class="secondary" id="pick-phase2">切換 Phase 2</button>
+            <button type="button" class="secondary" id="show-phase0" hidden>展開 Phase 0 清單</button>
+          </div>
+        </div>
+        <div class="copy-row" style="margin-bottom:12px" id="phase0-actions">
+          <button type="button" id="archive-phase0">標記 Phase 0 完成並收起</button>
+        </div>
+        <div id="phase0-body">
+        <details class="tools-prep-panel" open>
+          <summary>A. 帳號設定（你）</summary>
+          <div class="tools-prep-body">
+        <ul class="checklist" data-store="phase0-account">
+          <li><input type="checkbox" id="p0-1"><label for="p0-1">IG 名稱欄（搜尋詞，唔塞產品名）</label></li>
+          <li><input type="checkbox" id="p0-2"><label for="p0-2">Bio：30+、免費皮膚分析、DM「分析」</label></li>
+          <li><input type="checkbox" id="p0-3"><label for="p0-3">DM auto-reply：分析/輪廓/膚質/斑 → 3 條自測</label></li>
+          <li><input type="checkbox" id="p0-4"><label for="p0-4">Highlights：免費分析、客人分享、自測、淡斑</label></li>
+          <li><input type="checkbox" id="p0-5"><label for="p0-5">Pin 3 條：共鳴 Reel、3個位 Carousel、免費分析</label></li>
+          <li><input type="checkbox" id="p0-6"><label for="p0-6">Tracker 試行後清空</label></li>
+        </ul>
+          </div>
+        </details>
+        <details class="tools-prep-panel" open>
+          <summary>B. 合作啟動（同老闆 30–45min）</summary>
+          <div class="tools-prep-body">
+        <ul class="checklist" data-store="phase0-coop">
+          <li><input type="checkbox" id="p0-7"><label for="p0-7">指定 4 對接人（見下方「對接人」）</label></li>
+          <li><input type="checkbox" id="p0-8"><label for="p0-8">過 SLA + red lines</label></li>
+          <li><input type="checkbox" id="p0-9"><label for="p0-9">確認每 2 週拍攝日、週日 DM 值更、週五交數時間</label></li>
+          <li><input type="checkbox" id="p0-10"><label for="p0-10">交店內免費分析 SOP 俾前台/美容師</label></li>
+        </ul>
+        <div class="copy-row">
+          <button type="button" class="secondary" id="reset-phase0">重設 Phase 0 勾選</button>
+        </div>
+          </div>
+        </details>
+        </div>
+        <details class="phase0-archive" id="phase0-collapsed" hidden>
+          <summary>Phase 0 已完成（撳開可改）</summary>
+          <p style="font-size:14px;color:var(--muted)">帳號設定同合作啟動搞掂。日常請用「主題發掘」同「每週日程」。</p>
+        </details>
+      </section>
+
+      <section id="weekly" aria-labelledby="weekly-title">
+        <div class="section-head">
+          <h2 id="weekly-title">每週 Master 日程</h2>
+          <p>拍攝每 2 週一次；星期三後製 3–4 小時（唔好壓成 1.5hr）。日常用「本週進度」勾工序，呢度係參考。</p>
+        </div>
+        <details class="ref-drawer" id="weekly-master-drawer">
+          <summary>展開每週 Master 日程（參考）</summary>
+          <div class="ref-drawer-body">
+        <div class="day-tabs" role="tablist" aria-label="星期">
+          <button type="button" data-day="1" class="active">一</button>
+          <button type="button" data-day="2">二</button>
+          <button type="button" data-day="3">三</button>
+          <button type="button" data-day="4">四</button>
+          <button type="button" data-day="5">五</button>
+          <button type="button" data-day="6">六</button>
+          <button type="button" data-day="0">日</button>
+        </div>
+
+        <div class="day-panel active" data-day-panel="1">
+          <div class="grid-2">
+            <div class="card you">
+              <h3>你 · 45–90min</h3>
+              <ul style="margin:0;padding-left:18px;line-height:1.6;font-size:14px">
+                <li>Tracker 上週復盤 + 主題發掘線索</li>
+                <li class="phase-2-only">從 backlog 揀<strong>本週主題</strong>（新觀點優先）</li>
+                <li class="phase-1-only">M1：抄第一個月內容日程（素材庫）</li>
+                <li class="phase-2-only">Prompt 1–4 出內容</li>
+                <li>Campaign Brief + 交客服話術</li>
+              </ul>
+            </div>
+            <div class="card salon">
+              <h3>美容院</h3>
+              <ul style="margin:0;padding-left:18px;line-height:1.6;font-size:14px">
+                <li>Confirm 本週主題/療程講法/空檔</li>
+                <li>審批 deadline：出街前 48hr</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="2">
+          <div class="notice" id="tue-shoot-note">星期二：拍攝週 or 後製週（見頂部 pill）</div>
+          <div class="grid-2">
+            <div class="card you">
+              <h3>拍攝週 · 半日</h3>
+              <p style="margin:0;font-size:14px;line-height:1.55">3 Reel + Carousel 圖 + Story 素材（shot list）</p>
+              <h3 style="margin-top:12px">非拍攝週 · 2–3hr</h3>
+              <p style="margin:0;font-size:14px">剪上週片 / 補 B-roll</p>
+            </div>
+            <div class="card salon">
+              <h3>美容院</h3>
+              <p style="margin:0;font-size:14px;line-height:1.55">老闆出鏡、場地、同意書；或交 3–5 條手機素材</p>
+            </div>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="3">
+          <div class="card you">
+            <h3>你 · 後製日 3–4hr</h3>
+            <p style="margin:0;font-size:14px;line-height:1.55">剪 Reel、字幕、Canva Carousel、排程本週；<strong>今晚出核心 Reel</strong></p>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="4">
+          <div class="grid-2">
+            <div class="card you"><h3>你 · 30–45min</h3><p style="margin:0;font-size:14px">出 Carousel；1–2 格 Story</p></div>
+            <div class="card salon"><h3>美容院</h3><p style="margin:0;font-size:14px">回 DM；確認週末空檔</p></div>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="5">
+          <div class="grid-2">
+            <div class="card you">
+              <h3>你 · 45–60min</h3>
+              <p style="margin:0;font-size:14px;line-height:1.55">Reel#2、Story 問答；<strong>收 5 個數 → tracker → 週報</strong></p>
+            </div>
+            <div class="card salon">
+              <h3>美容院 · 18:00 前</h3>
+              <p style="margin:0;font-size:14px">交週報（查詢/預約/到店/成交/成交額 + FAQ）</p>
+            </div>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="6">
+          <div class="grid-2">
+            <div class="card you"><h3>你 · 30–45min</h3><p style="margin:0;font-size:14px">Reel#3；即場 Story + 免費分析 CTA</p></div>
+            <div class="card salon"><h3>美容院</h3><p style="margin:0;font-size:14px">即場素材；跟進週末預約</p></div>
+          </div>
+        </div>
+        <div class="day-panel" data-day-panel="0">
+          <div class="card you">
+            <h3>你 · 60–90min（店休）</h3>
+            <ul style="margin:0;padding-left:18px;line-height:1.6;font-size:14px">
+              <li>Tracker 本週數據整理</li>
+              <li>數據分析 + 更新 backlog</li>
+              <li><strong>DM 全覆</strong>（星期日你負責，唔係店內）</li>
+              <li>檢查下週排程 + 店休日調整</li>
+            </ul>
+          </div>
+        </div>
+
+        <p style="margin:14px 0 0;font-size:14px;color:var(--muted)">
+          <strong>出街節奏：</strong> Reel 核心（三）→ Carousel（四）→ Reel#2（五）→ Reel#3（六）→ Stories（四至六）
+        </p>
+          </div>
+        </details>
+      </section>
+
+      <section id="pain" hidden aria-hidden="true"></section>
+
+      <section id="daily" hidden aria-hidden="true"></section>
+
+      <section id="reference-hub" aria-labelledby="reference-hub-title">
+        <div class="section-head">
+          <h2 id="reference-hub-title">參考 & 工具箱</h2>
+          <p class="section-when"><strong>唔使日日開。</strong>星期一做 Brief、有新 Lead 要交接、同老闆對合作規則、或者唔記得邊個負責咩時先嚟。</p>
+        </div>
+
+        <details class="ref-drawer" id="pipeline-drawer">
+          <summary id="pipeline-title">Revenue Pipeline（9 階段）</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub">成個生意嘅地圖 — 邊度斷咗就補邊度。唔係每日操作，係<strong>迷路時</strong>睇。</p>
+            <div class="flow" role="list">
+              <span>1 月目標</span><em>→</em>
+              <span>2 Offer</span><em>→</em>
+              <span>3 內容</span><em>→</em>
+              <span>4 拍攝</span><em>→</em>
+              <span>5 發佈</span><em>→</em>
+              <span>6 查詢/預約</span><em>→</em>
+              <span>7 到店成交</span><em>→</em>
+              <span>8 回訪</span><em>→</em>
+              <span>9 復盤</span>
+            </div>
+            <table style="margin-top:14px">
+              <thead>
+                <tr><th>階段</th><th>你</th><th>美容院</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1–2 目標/Offer</td><td>建議、包裝 CTA</td><td>定價、名額、目標 confirm</td></tr>
+                <tr><td>3–5 內容/拍/發佈</td><td>主導產出</td><td>審批 24–48hr、出鏡</td></tr>
+                <tr><td>6 查詢</td><td>話術、分類、交接</td><td>4hr 內覆、confirm 時段</td></tr>
+                <tr><td>7 成交</td><td>不執行</td><td>免費分析 → 方案</td></tr>
+                <tr><td>8–9 回訪/數據</td><td>模板、tracker、週報</td><td>5 個數、無成交原因</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="ref-drawer" id="dm">
+          <summary id="dm-title">DM → Lead 交接</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub"><strong>幾時用：</strong>客人 DM 完、你準備交俾店內約時間 — 撳下面複製，填好 WhatsApp 店內。</p>
+            <div class="flow" style="margin-bottom:12px">
+              <span>留言/DM 關鍵字</span><em>→</em>
+              <span>3 條自測</span><em>→</em>
+              <span>邀請分析</span><em>→</em>
+              <span>你交接</span><em>→</em>
+              <span>客服約時段</span><em>→</em>
+              <span>到店</span>
+            </div>
+            <p style="font-size:14px;margin:0 0 8px"><strong>關鍵字：</strong> 輪廓 · 膚質 · 斑 · 3個位 · 分析</p>
+            <button type="button" data-copy="lead-handoff">複製 Lead 交接格式</button>
+            <pre class="copy-block" id="lead-handoff">Lead ID：（tracker 編號）
+日期：
+來源：（邊條 Reel/Carousel/Story）
+關鍵字：
+痛點摘要：（1 句）
+自測答案：（3 題簡答）
+建議方向：（Focus Dual / Jessi Glow / Pico / 要分析先）
+客人方便：（平日/週末/未答）
+狀態：待約 / 已邀請分析</pre>
+          </div>
+        </details>
+
+        <details class="ref-drawer" id="sla">
+          <summary id="sla-title">SLA + RACI 摘要</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub"><strong>幾時用：</strong>Phase 0 同老闆開會、或者合作有爭拗時 — 邊個幾時前要做完咩。</p>
+            <div class="grid-2">
+              <div class="card salon">
+                <h3>美容院承諾</h3>
+                <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6">
+                  <li>審批 24–48hr</li>
+                  <li>DM Mon–Sat 4hr 內</li>
+                  <li>每 2 週拍攝半日</li>
+                  <li>每週五 18:00 前 5 個數</li>
+                  <li>每週 3–5 條店內素材</li>
+                </ul>
+              </div>
+              <div class="card you">
+                <h3>你承諾</h3>
+                <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6">
+                  <li>週一中午前：計劃 + 話術</li>
+                  <li>拍攝前 48hr：shot list</li>
+                  <li>週五：週報入 tracker</li>
+                  <li>月底：月報</li>
+                </ul>
+              </div>
+            </div>
+            <table style="margin-top:14px">
+              <thead><tr><th>工作</th><th>你</th><th>美容院</th></tr></thead>
+              <tbody>
+                <tr><td>內容/排程</td><td>負責</td><td>審批+素材</td></tr>
+                <tr><td>DM 話術</td><td>設計</td><td>執行</td></tr>
+                <tr><td>報價/療效</td><td>起草</td><td>專業審核</td></tr>
+                <tr><td>預約/成交</td><td>—</td><td>負責</td></tr>
+                <tr><td>Tracker</td><td>設計+IG 數</td><td>預約/到店/成交</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="ref-drawer" id="contacts">
+          <summary id="contacts-title">對接人（3–4 人）</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub"><strong>幾時用：</strong>Phase 0 填一次；之後只係查電話。唔使每日開。</p>
+            <div class="contacts-grid">
+              <label>決策人（老闆）<input type="text" data-contact="boss" placeholder="姓名 + WhatsApp"></label>
+              <label>內部負責人（店長）<input type="text" data-contact="manager" placeholder="姓名 + WhatsApp"></label>
+              <label>專業（老闆/資深美容師）<input type="text" data-contact="pro" placeholder="姓名"></label>
+              <label>客服（前台/DM）<input type="text" data-contact="cs" placeholder="姓名 + WhatsApp"></label>
+              <label>固定拍攝日（每 2 週）<input type="text" data-contact="shoot" placeholder="例：隔週星期二 14:00"></label>
+              <label>週日 DM 值更<input type="text" data-contact="sunday" placeholder="你全覆 / 只 auto-reply"></label>
+            </div>
+          </div>
+        </details>
+
+        <details class="ref-drawer" id="templates">
+          <summary id="templates-title">複製模板</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub"><strong>幾時用：</strong>星期一 Brief 俾店內、星期五追 5 個數、DM 開場唔記得字。</p>
+            <button type="button" data-copy="campaign-brief">Campaign Brief</button>
+            <pre class="copy-block" id="campaign-brief">本週痛點（受眾問題一句）：
+本週內容角度：（初學者指南/迷思破解/案例分析…揀 3–5 個）
+點解揀呢題：（數據/原話）
+期間：
+可對應方向：（Focus Dual / Jessi Glow / Pico / 要分析先）
+關鍵字 CTA：
+免費分析名額/空檔：
+有冇同過去 8 週重複？點樣換新角度：
+本週出街：Reel×3 / Carousel×1 / Stories×__
+審批 deadline：出街前 48hr</pre>
+
+            <div id="weekly-report-template">
+            <button type="button" data-copy="weekly-data" style="margin-top:14px">週五 5 個數（俾店內填）</button>
+            <pre class="copy-block" id="weekly-data">【Jessi 上週數據 — 請週五 18:00 前回覆】
+查詢數：
+預約數（免費分析）：
+到店數：
+成交數：
+成交額：
+本週客人最常問 3 題：1. 2. 3.
+無成交主要原因：
+邊條內容有人 mention：
+下週可推空檔：</pre>
+            </div>
+
+            <button type="button" data-copy="dm-open" style="margin-top:14px">DM 開場（關鍵字後）</button>
+            <pre class="copy-block" id="dm-open">收到～我哋幫你睇緊呢方面。先問你 3 條簡單問題，等我哋幫你初步分清情況：
+1. 你最介意係斑、紋、鬆弛、包包面，定乾／暗啞？
+2. 大概出現咗幾耐？
+3. 你最介意係照鏡、化妝，定影相嗰刻？
+
+如果想睇得準啲，可以約個 30 分鐘免費皮膚分析，有儀器檢測同專人講解。可以淨係了解，唔一定即場做㗎。</pre>
+
+            <button type="button" data-copy="dm-sales-6" style="margin-top:14px">DM 銷售 6 步（Ch.12）</button>
+            <pre class="copy-block" id="dm-sales-6">【DM 銷售 6 步 — Jessi Beauty】
+
+1️⃣ 先答返佢原本問題（唔急推銷）
+「你問嘅○○，好多客人都關心…」
+
+2️⃣ 問現況
+「而家最困擾你係邊個位？出現咗幾耐？」
+
+3️⃣ 問目標
+「你想改善到咩狀態？有冇特別場合（影相/活動）？」
+
+4️⃣ 問障礙
+「之前試過咩方法？最擔心係咩（效果/價錢/怕痛）？」
+
+5️⃣ 判斷適合 + 清楚下一步
+「根據你講嘅，建議先做免費皮膚分析，有儀器數據同專人講解，唔使即場做療程。」
+
+6️⃣ 記入 tracker + 約跟進
+Lead 交接店內 → 確認時段 → 24hr 內你再 check 有冇約到</pre>
+          </div>
+        </details>
+
+        <details class="ref-drawer" id="workflow-backup-drawer">
+          <summary>數據備份（JSON）</summary>
+          <div class="ref-drawer-body">
+            <p class="ref-drawer-sub">匯出完整 workflow 狀態；換裝置或清 cache 前務必備份。</p>
+            <div class="backup-actions">
+              <button type="button" id="export-workflow-json-ref">匯出 JSON</button>
+              <label class="secondary" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer">
+                匯入 JSON
+                <input type="file" id="import-workflow-json-ref" accept=".json" hidden>
+              </label>
+            </div>
+          </div>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <div class="phase-toast" id="phase-toast" aria-live="polite"></div>
+
+  <div class="daily-dock-backdrop" id="daily-dock-backdrop" hidden></div>
+
+  <div class="daily-check-widget" id="daily-dock" aria-label="每日 Checklist">
+    <div class="daily-check-sheet" id="daily-dock-panel" role="dialog" aria-labelledby="daily-dock-title" hidden>
+      <div class="daily-dock-head">
+        <button type="button" class="daily-dock-close" id="daily-dock-close" aria-label="收起">×</button>
+        <strong id="daily-dock-title">每日 Checklist</strong>
+        <p>Mon–Sat 朝 + 收工前 · DM 30–45min<br>星期日 + 公眾假期 DM 由你全覆</p>
+      </div>
+      <div class="daily-dock-body">
+        <h4 class="you">你</h4>
+        <ul class="checklist" data-store="daily-you">
+          <li><input type="checkbox" id="dy-1"><label for="dy-1">清 IG：留言、DM、Story replies</label></li>
+          <li><input type="checkbox" id="dy-2"><label for="dy-2">關鍵字 → 自測 → 邀請免費分析</label></li>
+          <li><input type="checkbox" id="dy-3"><label for="dy-3">專業/報價 → 轉交店內（唔亂答）</label></li>
+          <li><input type="checkbox" id="dy-4"><label for="dy-4">新 lead 入 tracker + 需要時 Lead 交接</label></li>
+          <li><input type="checkbox" id="dy-5"><label for="dy-5">記 1–2 句客人原話（下週內容用）</label></li>
+        </ul>
+        <h4 class="salon">美容院客服</h4>
+        <ul class="checklist" data-store="daily-salon">
+          <li><input type="checkbox" id="ds-1"><label for="ds-1">4hr 內覆新 DM（auto-reply 後）</label></li>
+          <li><input type="checkbox" id="ds-2"><label for="ds-2">Lead 交接 → confirm 時段 → 回覆你</label></li>
+          <li><input type="checkbox" id="ds-3"><label for="ds-3">記來源、痛點、無預約原因</label></li>
+        </ul>
+      </div>
+      <div class="daily-dock-foot">
+        <button type="button" class="secondary" id="reset-daily" style="width:100%">重設今日勾選</button>
+      </div>
+    </div>
+    <button type="button" class="daily-check-fab" id="daily-dock-toggle" aria-expanded="false" aria-controls="daily-dock-panel">
+      <span>每日 Checklist</span>
+      <span class="fab-pct" id="daily-dock-pct">0/8</span>
+    </button>
+  </div>
+
+  <script src="assets/jessi-workflow.js"></script>
+</body>
+</html>

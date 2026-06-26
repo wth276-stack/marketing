@@ -1,0 +1,15 @@
+# Render static site — Jessi Beauty Marketing Workflow PWA
+# Dashboard: https://dashboard.render.com/static/new → connect this repo, branch master
+services:
+  - type: web
+    name: jessi-beauty-workflow
+    runtime: static
+    buildCommand: node --test tests/jessi-beauty-workflow.test.mjs && node --test tests/beauty-salon-tracker.test.mjs
+    staticPublishPath: .
+    headers:
+      - path: /jessi-workflow-sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.json
+        name: Cache-Control
+        value: no-cache
