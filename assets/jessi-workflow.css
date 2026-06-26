@@ -1715,12 +1715,20 @@
       .grid-2, .grid-3, .contacts-grid { grid-template-columns: 1fr; }
       .month-layout { grid-template-columns: 1fr; }
       .theme-bar-row { grid-template-columns: 1fr; }
-      .cal-cell { min-height: 72px; font-size: 10px; }
-      .cal-cell-num { font-size: 12px; }
-      .cal-cell-tag { font-size: 7px; }
       main { padding-bottom: 100px; }
       .month-calendar-wrap {
         max-height: min(72vh, calc(100vh - 12rem));
+      }
+      .month-calendar-wrap::before {
+        content: "直版可左右滑動睇完整格仔";
+        display: block;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        padding: 6px 10px;
+        background: #faf5f8;
+        border-bottom: 1px solid var(--line);
       }
       @supports (height: 100dvh) {
         .month-calendar-wrap {
@@ -1729,8 +1737,30 @@
       }
       .month-cal-scroll {
         max-height: inherit;
-        touch-action: pan-y;
+        overflow-x: auto;
+        overflow-y: auto;
+        touch-action: pan-x pan-y;
       }
+      .month-cal-board {
+        --cal-col-min: 108px;
+        grid-template-columns: repeat(7, minmax(var(--cal-col-min), 1fr));
+        min-width: calc(var(--cal-col-min) * 7);
+        width: max(100%, calc(var(--cal-col-min) * 7));
+        grid-auto-rows: minmax(120px, auto);
+      }
+      .cal-dow {
+        font-size: 12px;
+        padding: 10px 4px;
+      }
+      .cal-cell {
+        min-height: 120px;
+        font-size: 11px;
+        padding: 8px 6px;
+        overflow: visible;
+      }
+      .cal-cell-num { font-size: 14px; }
+      .cal-cell-tag { font-size: 8px; }
+      .cal-cell-tag.hol { -webkit-line-clamp: 3; }
       .month-cal-scroll::after {
         content: "";
         display: block;
