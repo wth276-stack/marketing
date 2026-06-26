@@ -27,9 +27,9 @@ test("workflow exposes the required standalone app structure", async () => {
   assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1"/);
   assert.match(
     html,
-    /<link rel="stylesheet" href="assets\/jessi-workflow\.css">/
+    /<link rel="stylesheet" href="assets\/jessi-workflow\.css(\?[^"]+)?">/
   );
-  assert.match(html, /<script src="assets\/jessi-workflow\.js"><\/script>/);
+  assert.match(html, /<script src="assets\/jessi-workflow\.js(\?[^"]+)?"><\/script>/);
   assert.doesNotMatch(html, /<style>/);
   assert.doesNotMatch(html, /<script>(?!.*src=)/);
 
@@ -53,6 +53,7 @@ test("workflow asset files exist and contain extracted content", async () => {
   assert.match(css, /:root\s*\{/);
   assert.match(css, /--rose:/);
   assert.match(css, /body\.salon-view/);
+  assert.match(css, /\.month-cal-board/);
   assert.match(js, /const STORAGE = "jessi-workflow-v2"/);
 });
 

@@ -1475,7 +1475,7 @@ ${strategyBlock}
       const phase = state.phase === "1" ? "1" : "2";
       const todayKey = toDateKey(new Date());
       label.textContent = `${viewMonthYear}年${viewMonthIdx + 1}月`;
-      grid.innerHTML = "";
+      grid.querySelectorAll(".cal-cell").forEach((el) => el.remove());
 
       const first = new Date(viewMonthYear, viewMonthIdx, 1, 12, 0, 0);
       const startPad = first.getDay() === 0 ? 6 : first.getDay() - 1;
