@@ -145,6 +145,7 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
+    const REEL_SCHEMA_VERSION = 3;
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -205,6 +206,9 @@
         hookCandidates: [],
         hookCandidatesAt: null,
         interactionGoal: "",
+        contentDirection: "",
+        contentDirectionAt: null,
+        directionCandidates: [],
         scriptReview: null,
         scriptReviewAt: null,
         coreMessage: "",
@@ -229,9 +233,35 @@
       return reel;
     }
 
+    function inferWizardStep(merged) {
+      if (merged.scriptReview) return 3;
+      if (merged.aiGeneratedAt) return 2;
+      if (merged.aiOptions) return 1;
+      return 0;
+    }
+
+    function migrateReelToV3(r) {
+      const out = { ...r };
+      if (typeof out.contentDirection !== "string") out.contentDirection = "";
+      if (out.contentDirectionAt === undefined) out.contentDirectionAt = null;
+      if (!Array.isArray(out.directionCandidates)) out.directionCandidates = [];
+      if (r.wizardStep === undefined) {
+        out.wizardStep = inferWizardStep(out);
+      } else if (r.wizardStep >= 1 && r.wizardStep <= 3) {
+        out.wizardStep = r.wizardStep - 1;
+      } else {
+        out.wizardStep = r.wizardStep;
+      }
+      return out;
+    }
+
     function normalize(state) {
       if (!state || typeof state !== "object") state = { reels: [], activeReelId: null };
       if (!Array.isArray(state.reels)) state.reels = [];
+      if (state.reelsSchemaVersion === undefined || state.reelsSchemaVersion < 3) {
+        state.reels = state.reels.map((r) => migrateReelToV3(r));
+        state.reelsSchemaVersion = 3;
+      }
       state.reels = state.reels.map((r) => {
         const base = newReel();
         const merged = { ...base, ...r };
@@ -251,17 +281,12 @@
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
         if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
+        if (!Array.isArray(merged.directionCandidates)) merged.directionCandidates = [];
+        if (typeof merged.contentDirection !== "string") merged.contentDirection = "";
+        if (merged.contentDirectionAt === undefined) merged.contentDirectionAt = null;
         if (merged.scriptReview !== null && typeof merged.scriptReview !== "object") merged.scriptReview = null;
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
-        }
-        if (r.wizardStep === undefined) {
-          if (merged.aiGeneratedAt) merged.wizardStep = 3;
-          else if (merged.aiOptions) merged.wizardStep = 2;
-          else if (merged.hook && merged.hook.trim()) merged.wizardStep = 1;
-          else merged.wizardStep = 0;
-        } else if (merged.wizardStep === 1 && !(merged.hook && merged.hook.trim())) {
-          merged.wizardStep = 0;
         }
         return merged;
       });
