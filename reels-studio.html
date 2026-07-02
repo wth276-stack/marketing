@@ -66,6 +66,7 @@
     .caption-tools button { padding: 6px 12px; }
     #p-script { width: 100%; min-height: 240px; font: inherit; resize: vertical; box-sizing: border-box; }
     .script-tools { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+    .script-tools button { padding: 6px 12px; }
   </style>
 </head>
 <body>
@@ -489,6 +490,7 @@
         if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
         r.aiGeneratedAt = new Date().toISOString();
         r.updatedAt = r.aiGeneratedAt;
+        assembleScript(true);
         saveReels(state);
         renderReelList();
         renderPlan();

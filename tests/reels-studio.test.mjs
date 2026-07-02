@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v13", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v14", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v13/);
+  assert.match(sw, /jessi-workflow-cache-v14/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -162,4 +162,11 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /<textarea[^>]*id="p-script"[^>]*>\$\{escapeHtml\(r\.scriptText\)\}<\/textarea>/);
   assert.match(html, /scriptText:\s*""/);
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
+});
+
+test("reels-studio Stage B auto-assembles script + SW bumped to v14", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v14/);
+  assert.match(html, /assembleScript\(true\)/);
 });
