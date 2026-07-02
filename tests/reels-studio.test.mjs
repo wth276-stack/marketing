@@ -94,3 +94,10 @@ test("reels-studio declares review scorecard", async () => {
     assert.match(html, new RegExp(k), `missing score label ${k}`);
   }
 });
+
+test("reels-studio declares export/import functions", async () => {
+  const html = await readHtml();
+  for (const name of ["exportJson", "importJsonFile"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+});

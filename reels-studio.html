@@ -403,6 +403,83 @@
       });
     }
 
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson() {
+      downloadFile(
+        "jessi-reels-studio-backup.json",
+        JSON.stringify({
+          exportedAt: new Date().toISOString(),
+          schemaVersion: SCHEMA_VERSION,
+          app: "jessi-reels-studio",
+          data: state
+        }, null, 2),
+        "application/json"
+      );
+    }
+
+    function importJsonFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result));
+          const incoming = parsed.data && typeof parsed.data === "object" ? parsed.data : parsed;
+          if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+            throw new Error("JSON 必須包含 data 物件。");
+          }
+          if (!confirm("覆蓋現有數據？匯入後會重新載入頁面。")) return;
+          saveReels(normalize(incoming));
+          location.reload();
+        } catch (error) {
+          alert("JSON 匯入失敗：" + (error.message || "格式不正確"));
+        }
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function deleteReel() {
+      const r = activeReel();
+      if (!r) return;
+      if (!confirm(`刪除「${r.title || "未命名"}」？此操作不可復原。`)) return;
+      state.reels = state.reels.filter((x) => x.id !== r.id);
+      state.activeReelId = state.reels[0]?.id || null;
+      saveReels(state);
+      renderReelList();
+      renderPlan();
+      renderShootChecklist();
+      renderReview();
+    }
+
+    function duplicateReel() {
+      const r = activeReel();
+      if (!r) return;
+      const copy = newReel();
+      Object.assign(copy, JSON.parse(JSON.stringify(r)));
+      copy.id = uid();
+      copy.title = (r.title || "未命名") + "（複製）";
+      copy.createdAt = new Date().toISOString();
+      copy.updatedAt = copy.createdAt;
+      copy.status = "planning";
+      state.reels.push(copy);
+      state.activeReelId = copy.id;
+      saveReels(state);
+      renderReelList();
+      renderPlan();
+      renderShootChecklist();
+      renderReview();
+    }
+
     function checklistPct(r) {
       const done = CHECKLIST_KEYS.filter((k) => r.checklist[k]).length;
       return Math.round((done / CHECKLIST_KEYS.length) * 100);
@@ -487,6 +564,10 @@
     });
     renderShootChecklist();
     renderReview();
+    document.getElementById("export-json").addEventListener("click", exportJson);
+    document.getElementById("import-json").addEventListener("change", importJsonFile);
+    document.getElementById("delete-reel").addEventListener("click", deleteReel);
+    document.getElementById("duplicate-reel").addEventListener("click", duplicateReel);
   </script>
 </body>
 </html>
