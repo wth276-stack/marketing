@@ -150,6 +150,21 @@
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
     const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型"];
+    const HOOK_TYPES = ["痛點版", "反差版", "結果版", "好奇版", "錯誤版", "清單版", "問題版", "否定常識版", "身份認同版", "直接命令版"];
+    const HOOK_FORMULAS = [
+      "你以為＿＿，其實＿＿。",
+      "如果你＿＿，可能唔係因為＿＿，而係＿＿。",
+      "大部分人做＿＿，都忽略咗＿＿。",
+      "想＿＿，先唔好急住＿＿。",
+      "我會建議你先改＿＿，而唔係＿＿。",
+      "＿＿之前，你一定要知道呢件事。",
+      "呢個位唔改，你做幾多都好易冇效果。"
+    ];
+    const CTA_VARIANTS = {
+      留言: ["你中咗幾多個？留個數字", "你係 A 定 B？留言講", "你最常卡喺邊個位？", "你想我下一條講 A 定 B？"],
+      save: ["save 低呢條，下次跟住做", "save 低下次睇返", "呢個框架遲啲用得返，save 先"],
+      share: ["send 畀一個成日卡住嘅朋友", "轉畀你覺得會需要嘅人", "send 畀身邊都係咁嘅人"]
+    };
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
       hook: "頭 2 秒留人", retention: "整體留存", rhythm: "節奏密度",
@@ -201,8 +216,9 @@
         title: "",
         structure: "反差型",
         hook: "",
-        audience: "",
+        audience: "香港美容業有興趣嘅人",
         tone: "香港廣東話、自然、簡短",
+        hookTypeSel: "全部",
         hookCandidates: [],
         hookCandidatesAt: null,
         interactionGoal: "",
@@ -426,12 +442,13 @@
             type: "object",
             properties: {
               type: { type: "string" },
+              formula: { type: "string" },
               text: { type: "string" },
               reason: { type: "string" },
               risk: { type: "string" },
               fitGoal: { type: "string" }
             },
-            required: ["type", "text", "reason", "risk", "fitGoal"]
+            required: ["type", "formula", "text", "reason", "risk", "fitGoal"]
           }
         }
       },
@@ -439,15 +456,24 @@
     };
 
     function hookPrompt(r) {
+      const typeSel = r.hookTypeSel || "全部";
+      const typeLine = typeSel === "全部"
+        ? "出 10 個 hook，每個版型（痛點版/反差版/結果版/好奇版/錯誤版/清單版/問題版/否定常識版/身份認同版/直接命令版）各 1 個。"
+        : "出 5 個 hook，全部係「" + typeSel + "」版型，用唔同公式角度。";
       return [
-        "你是香港美容業 IG Reels hook 策劃。根據以下輸入，出 5 個唔同類型嘅 hook 候選，每個附留人理由、風險、適合互動目標。繁體中文、廣東話自然語氣。",
+        "你是香港美容業 IG Reels hook 策劃。根據以下輸入，出 hook 候選。繁體中文、廣東話自然語氣。",
         "輸入：",
         "主題：" + r.title,
+        "重點：" + r.coreMessage,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
         "",
-        "出 5 個 hook，類型分別係：痛點、反差、結果、好奇、身份認同（各 1 個）。",
-        "輸出 JSON：hooks 陣列，每項含 type（痛點/反差/結果/好奇/身份認同）、text（hook 文字）、reason（留人理由）、risk（風險：會唔會太標題黨/太闊/太似廣告）、fitGoal（適合互動目標：留言/save/share 三揀一）。嚴格跟 JSON schema。"
+        "可套用嘅 Hook 公式（自選最啱嘅，formula 欄寫返用咗邊條）：",
+        HOOK_FORMULAS.map((f, i) => (i + 1) + ". " + f).join("\n"),
+        "",
+        typeLine,
+        "準則：hook 令觀眾心入面答一句「係喎」或「點解嘅？」就留到人。",
+        "輸出 JSON：hooks 陣列，每項含 type（版型）、formula（用咗邊條公式，逐字）、text（hook 文字）、reason（留人理由）、risk（風險：太標題黨/太闊/太似廣告）、fitGoal（適合互動目標：留言/save/share）。嚴格跟 JSON schema。"
       ].join("\n");
     }
 
@@ -455,6 +481,8 @@
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.title.trim()) { alert("請先填主題。"); return; }
+      const sel = document.getElementById("hook-type-select");
+      if (sel) r.hookTypeSel = sel.value;
       const btn = document.getElementById("ai-generate-hooks");
       if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
       try {
@@ -486,7 +514,7 @@
       box.innerHTML = r.hookCandidates.map((h, i) => {
         const sel = r.hook && r.hook === h.text;
         return `<div class="hook-card${sel ? " selected" : ""}" data-i="${i}">
-          <div class="hook-type">${escapeHtml(h.type || "")}</div>
+          <div class="hook-type">${escapeHtml(h.type || "")}${h.formula ? ` · <span class="hook-formula">公式：${escapeHtml(h.formula)}</span>` : ""}</div>
           <div class="hook-text">${escapeHtml(h.text || "")}</div>
           <div class="hook-meta">留人理由：${escapeHtml(h.reason || "")}</div>
           <div class="hook-meta">風險：${escapeHtml(h.risk || "")}</div>
@@ -506,6 +534,54 @@
           renderPlan();
         });
       });
+    }
+
+    function renderCtaPicker() {
+      const typeSel = document.getElementById("cta-type-select");
+      const variantSel = document.getElementById("cta-variant-select");
+      const customWrap = document.getElementById("cta-custom-wrap");
+      if (!typeSel || !variantSel) return;
+      const r = activeReel();
+      if (!r) return;
+      const fillVariants = (type) => {
+        const list = CTA_VARIANTS[type] || [];
+        variantSel.innerHTML = list.map((v) => `<option value="${escapeHtml(v)}"${r.cta === v ? " selected" : ""}>${escapeHtml(v)}</option>`).join("");
+        variantSel.style.display = list.length ? "inline-block" : "none";
+      };
+      const syncType = () => {
+        const t = typeSel.value;
+        if (t === "自訂" || t === "") {
+          if (customWrap) customWrap.style.display = t === "自訂" ? "block" : "none";
+          variantSel.style.display = "none";
+          return;
+        }
+        if (customWrap) customWrap.style.display = "none";
+        fillVariants(t);
+      };
+      typeSel.onchange = () => {
+        const r2 = activeReel(); if (!r2) return;
+        const t = typeSel.value;
+        if (t === "自訂" || t === "") {
+          r2.interactionGoal = t === "自訂" ? "" : (r2.interactionGoal || "");
+        } else {
+          r2.interactionGoal = t;
+          const list = CTA_VARIANTS[t] || [];
+          if (list.length && !list.includes(r2.cta)) {
+            r2.cta = list[0];
+          }
+        }
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      };
+      variantSel.onchange = () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.cta = variantSel.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      };
+      syncType();
     }
 
     const STAGE_A_SCHEMA = {
@@ -896,7 +972,7 @@
     }
 
     function canAdvanceToStep1(r) {
-      return !!(r.title.trim() && r.hook.trim());
+      return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
     }
 
     function canAdvanceToStep2(r) {
@@ -946,8 +1022,17 @@
           <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}</div>
           <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
-            <div class="field"><label>目標受眾</label><input id="p-audience" value="${escapeHtml(r.audience)}"></div>
-            <div class="field"><label>語氣</label><input id="p-tone" value="${escapeHtml(r.tone)}"></div>
+            <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
+            <details id="advanced-fields"><summary>進階（受眾 / 語氣）</summary>
+              <div class="field"><label>目標受眾</label><input id="p-audience" value="${escapeHtml(r.audience)}"></div>
+              <div class="field"><label>語氣</label><input id="p-tone" value="${escapeHtml(r.tone)}"></div>
+            </details>
+            <div class="field"><label>Hook 版型</label>
+              <select id="hook-type-select">
+                <option value="全部"${(r.hookTypeSel || "全部") === "全部" ? " selected" : ""}>全部（每版型 1 個）</option>
+                ${HOOK_TYPES.map((t) => `<option value="${escapeHtml(t)}"${(r.hookTypeSel || "全部") === t ? " selected" : ""}>${escapeHtml(t)}</option>`).join("")}
+              </select>
+            </div>
             <div class="ai-block">
               <div class="toolbar">
                 <button type="button" id="ai-generate-hooks">${r.hookCandidates && r.hookCandidates.length ? "重新生成 Hook" : "AI 生成 Hook"}</button>
@@ -955,21 +1040,31 @@
               <div id="hook-candidates"></div>
             </div>
             <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
+            <div class="field"><label>CTA 互動目標</label>
+              <select id="cta-type-select">
+                <option value=""${!r.interactionGoal && !r.cta ? " selected" : ""}>（未揀）</option>
+                <option value="留言"${r.interactionGoal === "留言" ? " selected" : ""}>留言</option>
+                <option value="save"${r.interactionGoal === "save" ? " selected" : ""}>save</option>
+                <option value="share"${r.interactionGoal === "share" ? " selected" : ""}>share</option>
+                <option value="自訂"${r.interactionGoal === "" && r.cta ? " selected" : ""}>自訂</option>
+              </select>
+              <select id="cta-variant-select"></select>
+            </div>
+            <div class="field" id="cta-custom-wrap" style="display:${r.interactionGoal === "" && r.cta ? "block" : "none"}"><label>自訂 CTA</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
           </div>
           <div class="wizard-step" data-step-n="1">
             <div class="field"><label>結構</label>
               <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
             </div>
-            <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
-            <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
-          </div>
-          <div class="wizard-step" data-step-n="2">
             <div class="ai-block">
               <div class="toolbar">
                 <button type="button" id="ai-generate-options">${r.aiOptions ? "重新生成選項" : "AI 生成選項"}</button>
               </div>
               <div id="ai-picks"></div>
             </div>
+          </div>
+          <div class="wizard-step" data-step-n="2">
+            <p style="color:#7a6f7a;font-size:13px">（Step 2 暫時空白，Task 3 會接手。）</p>
           </div>
           <div class="wizard-step" data-step-n="3">
             ${r.interactionGoal ? `<div class="field"><label>AI 揀嘅互動目標</label><div class="interaction-goal">${escapeHtml(r.interactionGoal)} <span class="goal-hint">（目前由 AI 自動判斷，之後可手動調整）</span></div></div>` : ""}
@@ -1036,6 +1131,12 @@
       bind("#p-script", "scriptText");
       bind("#p-cover", "coverText");
       bind("#p-tags", "hashtags", (v) => v.split(/[,，]/).map((t) => t.trim()).filter(Boolean));
+      const hookTypeSelEl = panel.querySelector("#hook-type-select");
+      if (hookTypeSelEl) hookTypeSelEl.addEventListener("change", () => {
+        r.hookTypeSel = hookTypeSelEl.value;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
 
       panel.querySelectorAll(".seg-row").forEach((row) => {
         const i = Number(row.dataset.i);
@@ -1076,7 +1177,7 @@
       if (nextBtn) nextBtn.addEventListener("click", () => {
         const r2 = activeReel(); if (!r2) return;
         const cur = r2.wizardStep ?? 0;
-        if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
+        if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題、重點，同揀 Hook、CTA。"); return; }
         if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填重點同 CTA。"); return; }
         if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll）。"); return; }
         goWizardStep(cur + 1);
@@ -1109,6 +1210,7 @@
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
       renderHookCandidates();
+      renderCtaPicker();
       renderScriptReview();
       renderAiOptions();
     }

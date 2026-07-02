@@ -216,7 +216,7 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v17", async () => {
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
   const html = await readHtml();
-  assert.match(html, /audience:\s*""/);
+  assert.match(html, /audience:\s*"香港美容業有興趣嘅人"/);
   assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
   assert.match(html, /hookCandidates:\s*\[\]/);
   assert.match(html, /function generateAiHooks\(/);
@@ -236,8 +236,33 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /留人理由/);
   assert.match(html, /風險/);
   assert.match(html, /適合/);
+  assert.match(html, /const HOOK_TYPES = \[/);
+  assert.match(html, /const HOOK_FORMULAS = \[/);
+  assert.match(html, /const CTA_VARIANTS = \{/);
+  assert.match(html, /id="hook-type-select"/);
+  assert.match(html, /id="cta-type-select"/);
+  assert.match(html, /id="cta-variant-select"/);
+  assert.match(html, /hookTypeSel:\s*"全部"/);
+  assert.match(html, /formula:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /你以為＿＿，其實＿＿/);
+  for (const t of ["痛點版", "反差版", "結果版", "好奇版", "錯誤版", "清單版", "問題版", "否定常識版", "身份認同版", "直接命令版"]) {
+    assert.match(html, new RegExp(t), `missing hook type ${t}`);
+  }
+  assert.match(html, /留人理由/);
+  assert.match(html, /公式/);
   assert.match(html, /copy\.hookCandidates = \[\]/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+});
+
+test("reels-studio CTA picker + interactionGoal 用家明揀", async () => {
+  const html = await readHtml();
+  assert.match(html, /function renderCtaPicker\(/);
+  assert.match(html, /CTA_VARIANTS\s*=/);
+  for (const v of ["你中咗幾多個？留個數字", "save 低呢條，下次跟住做", "send 畀一個成日卡住嘅朋友"]) {
+    assert.match(html, new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `missing CTA variant ${v}`);
+  }
+  assert.match(html, /\.interactionGoal\s*=\s*t;/);
+  assert.match(html, /自訂/);
 });
 
 test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time structure + interactionGoal", async () => {
