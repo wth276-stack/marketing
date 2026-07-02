@@ -142,12 +142,12 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /id="assemble-caption"/);
   assert.match(html, /id="copy-caption"/);
   assert.match(html, /<textarea[^>]*id="p-caption"/);
+  assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
 test("reels-studio Stage B asks full caption + SW bumped to v13", async () => {
   const html = await readHtml();
-  const fs = await import("node:fs");
-  const sw = fs.readFileSync("jessi-workflow-sw.js", "utf8");
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
   assert.match(sw, /jessi-workflow-cache-v13/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
