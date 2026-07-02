@@ -17,6 +17,7 @@
       --paper: #fff5f8;
       --panel: #ffffff;
       --line: #ead9e2;
+      --accent: #c96b8a;
       --shadow: 0 18px 48px rgba(43, 34, 48, .12);
       --radius: 10px;
       font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", Arial, sans-serif;
@@ -67,6 +68,14 @@
     #p-script { width: 100%; min-height: 240px; font: inherit; resize: vertical; box-sizing: border-box; }
     .script-tools { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
     .script-tools button { padding: 6px 12px; }
+    .wizard-step { display: none; }
+    .wizard[data-step="1"] .wizard-step[data-step-n="1"],
+    .wizard[data-step="2"] .wizard-step[data-step-n="2"],
+    .wizard[data-step="3"] .wizard-step[data-step-n="3"] { display: block; }
+    .wizard-dots { display: flex; gap: 8px; margin: 8px 0; }
+    .wizard-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--line); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
+    .wizard-dot.active { background: var(--accent); }
+    .wizard-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
   </style>
 </head>
 <body>
@@ -185,7 +194,8 @@
         aiOptions: null,
         aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
-        scriptText: ""
+        scriptText: "",
+        wizardStep: 1
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -214,6 +224,11 @@
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+        }
+        if (r.wizardStep === undefined) {
+          if (merged.aiGeneratedAt) merged.wizardStep = 3;
+          else if (merged.aiOptions) merged.wizardStep = 2;
+          else merged.wizardStep = 1;
         }
         return merged;
       });
@@ -383,11 +398,11 @@
         r.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         r.updatedAt = new Date().toISOString();
         saveReels(state);
-        renderAiOptions();
+        renderPlan();
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "AI 生成選項"; }
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiOptions ? "重新生成選項" : "AI 生成選項"); }
       }
     }
 
@@ -498,8 +513,22 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "生成完整內容"; }
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiGeneratedAt ? "重新生成內容" : "生成完整內容"); }
       }
+    }
+
+    function regenerateOptions() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.aiOptions && !confirm("重新生成會拎走現有揀揀，繼續？")) return;
+      generateAiOptions();
+    }
+
+    function regenerateContent() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.aiGeneratedAt && !confirm("重新生成會覆寫現有逐鏡/caption/hashtag/封面，繼續？")) return;
+      generateAiContent();
     }
 
     function assembleCaption() {
@@ -574,6 +603,25 @@
       }
     }
 
+    function canAdvanceToStep2(r) {
+      return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
+    }
+
+    function canAdvanceToStep3(r) {
+      const p = r.aiPicks || {};
+      return !!(p.structureAngle && p.lengthStyle && p.ctaStyle && p.broll);
+    }
+
+    function goWizardStep(n) {
+      const r = activeReel();
+      if (!r) return;
+      n = Math.max(1, Math.min(3, n));
+      r.wizardStep = n;
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -595,45 +643,63 @@
             </div>`
         )
         .join("");
-      const aiBlock = `
-        <div class="ai-block">
-          <div class="toolbar">
-            <button type="button" id="ai-generate-options">AI 生成選項</button>
-            <button type="button" class="primary" id="ai-generate-content">生成完整內容</button>
+      const step = r.wizardStep || 1;
+      const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n}</span>`;
+      panel.innerHTML = `
+        <div class="wizard" data-step="${step}">
+          <div class="wizard-dots">${dot(1)}${dot(2)}${dot(3)}</div>
+          <div class="wizard-step" data-step-n="1">
+            <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
+            <div class="field"><label>結構</label>
+              <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
+            </div>
+            <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
+            <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
+            <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
           </div>
-          <div id="ai-picks"></div>
+          <div class="wizard-step" data-step-n="2">
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-generate-options">${r.aiOptions ? "重新生成選項" : "AI 生成選項"}</button>
+              </div>
+              <div id="ai-picks"></div>
+            </div>
+          </div>
+          <div class="wizard-step" data-step-n="3">
+            <div class="field"><label>逐鏡頭 shot list</label>
+              <div id="seg-list">${segs}</div>
+              <button type="button" id="seg-add">+ 加鏡頭</button>
+            </div>
+            <div class="field"><label>一句總結</label><input id="p-summary" value="${escapeHtml(r.summary)}"></div>
+            <div class="field"><label>完整 caption（貼 IG 用）</label>
+              <textarea id="p-caption" rows="6">${escapeHtml(r.caption)}</textarea>
+              <div class="caption-tools">
+                <button type="button" id="assemble-caption">組裝全文</button>
+                <button type="button" id="copy-caption">複製</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>成個腳本（連秒數，可拍/可交攝影師）</label>
+              <textarea id="p-script" rows="10">${escapeHtml(r.scriptText)}</textarea>
+              <div class="script-tools">
+                <button type="button" id="assemble-script">組裝腳本</button>
+                <button type="button" id="copy-script">複製腳本</button>
+              </div>
+            </div>
+            <div class="field"><label>hashtag（3–8 個，逗號分隔）</label><input id="p-tags" value="${escapeHtml(r.hashtags.join(", "))}"></div>
+            <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" class="primary" id="ai-generate-content">${r.aiGeneratedAt ? "重新生成內容" : "生成完整內容"}</button>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-nav">
+            <button type="button" id="wiz-prev">← 上一步</button>
+            <button type="button" id="wiz-skip">略過 AI →</button>
+            <button type="button" id="wiz-next">下一步 →</button>
+          </div>
         </div>`;
-      panel.innerHTML = aiBlock + `
-        <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
-        <div class="field"><label>結構</label>
-          <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
-        </div>
-        <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
-        <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
-        <div class="field"><label>逐鏡頭 shot list</label>
-          <div id="seg-list">${segs}</div>
-          <button type="button" id="seg-add">+ 加鏡頭</button>
-        </div>
-        <div class="field"><label>一句總結</label><input id="p-summary" value="${escapeHtml(r.summary)}"></div>
-        <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
-        <div class="field"><label>完整 caption（貼 IG 用）</label>
-          <textarea id="p-caption" rows="6">${escapeHtml(r.caption)}</textarea>
-          <div class="caption-tools">
-            <button type="button" id="assemble-caption">組裝全文</button>
-            <button type="button" id="copy-caption">複製</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>成個腳本（連秒數，可拍/可交攝影師）</label>
-          <textarea id="p-script" rows="10">${escapeHtml(r.scriptText)}</textarea>
-          <div class="script-tools">
-            <button type="button" id="assemble-script">組裝腳本</button>
-            <button type="button" id="copy-script">複製腳本</button>
-          </div>
-        </div>
-        <div class="field"><label>hashtag（3–8 個，逗號分隔）</label><input id="p-tags" value="${escapeHtml(r.hashtags.join(", "))}"></div>
-        <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
-      `;
 
       const bind = (id, key, parse) => {
         const el = panel.querySelector(id);
@@ -683,10 +749,36 @@
         saveReels(state);
         renderPlan();
       });
+      const stepCur = r.wizardStep || 1;
+      const prevBtn = panel.querySelector("#wiz-prev");
+      const nextBtn = panel.querySelector("#wiz-next");
+      const skipBtn = panel.querySelector("#wiz-skip");
+      if (prevBtn) prevBtn.style.display = stepCur === 1 ? "none" : "inline-block";
+      if (nextBtn) nextBtn.style.display = stepCur === 3 ? "none" : "inline-block";
+      if (skipBtn) skipBtn.style.display = stepCur === 2 ? "inline-block" : "none";
+      if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep || 1) - 1));
+      if (skipBtn) skipBtn.addEventListener("click", () => goWizardStep(3));
+      if (nextBtn) nextBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        const cur = r2.wizardStep || 1;
+        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+        if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll）。"); return; }
+        goWizardStep(cur + 1);
+      });
+      panel.querySelectorAll(".wizard-dot").forEach((d) => {
+        d.addEventListener("click", () => {
+          const r2 = activeReel(); if (!r2) return;
+          const target = Number(d.dataset.go);
+          if (target === (r2.wizardStep || 1)) return;
+          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+          if (target === 3 && !canAdvanceToStep3(r2) && !r2.aiGeneratedAt) { alert("先揀齊四組選項，或撳「略過 AI」直接手動編輯。"); return; }
+          goWizardStep(target);
+        });
+      });
       const genOptsBtn = panel.querySelector("#ai-generate-options");
-      if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
+      if (genOptsBtn) genOptsBtn.addEventListener("click", regenerateOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
-      if (genContentBtn) genContentBtn.addEventListener("click", generateAiContent);
+      if (genContentBtn) genContentBtn.addEventListener("click", regenerateContent);
       const asmBtn = panel.querySelector("#assemble-caption");
       if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
       const cpyBtn = panel.querySelector("#copy-caption");
@@ -852,6 +944,7 @@
       copy.createdAt = new Date().toISOString();
       copy.updatedAt = copy.createdAt;
       copy.status = "planning";
+      copy.wizardStep = 1;
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);

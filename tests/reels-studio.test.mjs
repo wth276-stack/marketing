@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v14", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v15", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v14/);
+  assert.match(sw, /jessi-workflow-cache-v15/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,9 +164,50 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v14", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v15", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v14/);
+  assert.match(sw, /jessi-workflow-cache-v15/);
   assert.match(html, /assembleScript\(true\)/);
+});
+
+test("reels-studio 3-step wizard structure + navigation", async () => {
+  const html = await readHtml();
+  assert.match(html, /wizardStep:\s*1/);
+  assert.match(html, /function goWizardStep\(/);
+  assert.match(html, /function canAdvanceToStep2\(/);
+  assert.match(html, /function canAdvanceToStep3\(/);
+  assert.match(html, /class="wizard"/);
+  assert.match(html, /data-step-n="1"/);
+  assert.match(html, /data-step-n="2"/);
+  assert.match(html, /data-step-n="3"/);
+  assert.match(html, /class="wizard-dot/);
+  assert.match(html, /id="wiz-prev"/);
+  assert.match(html, /id="wiz-next"/);
+  assert.match(html, /id="wiz-skip"/);
+  assert.match(html, /\.wizard-step\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(html, /wizard\[data-step="1"\]/);
+  assert.match(html, /\.wizard-dot\.active\s*\{\s*background:\s*var\(--accent\);\s*\}/);
+  assert.match(html, /if \(r\.wizardStep === undefined\)/);
+  assert.match(html, /copy\.wizardStep = 1/);
+  assert.match(html, /id="ai-generate-options"/);
+  assert.match(html, /id="ai-generate-content"/);
+});
+
+test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(html, /function regenerateOptions\(/);
+  assert.match(html, /function regenerateContent\(/);
+  assert.match(html, /重新生成會拎走現有揀揀/);
+  assert.match(html, /重新生成會覆寫現有逐鏡\/caption\/hashtag\/封面/);
+  assert.match(html, /r\.aiOptions \? "重新生成選項" : "AI 生成選項"/);
+  assert.match(html, /r\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"/);
+  assert.match(html, /addEventListener\("click", regenerateOptions\)/);
+  assert.match(html, /addEventListener\("click", regenerateContent\)/);
+  // generateAiOptions must re-render via renderPlan so the options label flips to "重新生成選項"
+  assert.match(html, /saveReels\(state\);\s*renderPlan\(\);/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\)/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\)/);
 });
