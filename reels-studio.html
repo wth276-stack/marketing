@@ -561,8 +561,11 @@
       typeSel.onchange = () => {
         const r2 = activeReel(); if (!r2) return;
         const t = typeSel.value;
-        if (t === "自訂" || t === "") {
-          r2.interactionGoal = t === "自訂" ? "" : (r2.interactionGoal || "");
+        if (t === "") {
+          r2.interactionGoal = "";
+          r2.cta = "";
+        } else if (t === "自訂") {
+          r2.interactionGoal = "";
         } else {
           r2.interactionGoal = t;
           const list = CTA_VARIANTS[t] || [];
