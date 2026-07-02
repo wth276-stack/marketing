@@ -398,11 +398,11 @@
         r.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         r.updatedAt = new Date().toISOString();
         saveReels(state);
-        renderAiOptions();
+        renderPlan();
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "AI 生成選項"; }
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiOptions ? "重新生成選項" : "AI 生成選項"); }
       }
     }
 
