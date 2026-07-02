@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v16", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v17", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v16/);
+  assert.match(sw, /jessi-workflow-cache-v17/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,10 +164,10 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v16", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v17", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v16/);
+  assert.match(sw, /jessi-workflow-cache-v17/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -196,10 +196,10 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
   assert.match(html, /id="ai-generate-content"/);
 });
 
-test("reels-studio regenerate wrappers + dynamic labels + SW v16", async () => {
+test("reels-studio regenerate wrappers + dynamic labels + SW v17", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v16/);
+  assert.match(sw, /jessi-workflow-cache-v17/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -216,7 +216,7 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v16", async () => {
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
   const html = await readHtml();
-  assert.match(html, /audience:\s*""/);
+  assert.match(html, /audience:\s*"香港美容業有興趣嘅人"/);
   assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
   assert.match(html, /hookCandidates:\s*\[\]/);
   assert.match(html, /function generateAiHooks\(/);
@@ -236,14 +236,45 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /留人理由/);
   assert.match(html, /風險/);
   assert.match(html, /適合/);
+  assert.match(html, /const HOOK_TYPES = \[/);
+  assert.match(html, /const HOOK_FORMULAS = \[/);
+  assert.match(html, /const CTA_VARIANTS = \{/);
+  assert.match(html, /id="hook-type-select"/);
+  assert.match(html, /id="cta-type-select"/);
+  assert.match(html, /id="cta-variant-select"/);
+  assert.match(html, /hookTypeSel:\s*"全部"/);
+  assert.match(html, /formula:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /你以為＿＿，其實＿＿/);
+  for (const t of ["痛點版", "反差版", "結果版", "好奇版", "錯誤版", "清單版", "問題版", "否定常識版", "身份認同版", "直接命令版"]) {
+    assert.match(html, new RegExp(t), `missing hook type ${t}`);
+  }
+  assert.match(html, /留人理由/);
+  assert.match(html, /公式/);
   assert.match(html, /copy\.hookCandidates = \[\]/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+});
+
+test("reels-studio CTA picker + interactionGoal 用家明揀", async () => {
+  const html = await readHtml();
+  assert.match(html, /function renderCtaPicker\(/);
+  assert.match(html, /CTA_VARIANTS\s*=/);
+  for (const v of ["你中咗幾多個？留個數字", "save 低呢條，下次跟住做", "send 畀一個成日卡住嘅朋友"]) {
+    assert.match(html, new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `missing CTA variant ${v}`);
+  }
+  assert.match(html, /\.interactionGoal\s*=\s*t;/);
+  assert.match(html, /自訂/);
 });
 
 test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time structure + interactionGoal", async () => {
   const html = await readHtml();
   assert.match(html, /教學型/);
   assert.match(html, /故事型/);
+  assert.match(html, /對比型/);
+  assert.match(html, /步驟型/);
+  assert.match(html, /const ANGLES = \[/);
+  assert.match(html, /const LENGTH_SECONDS = \[/);
+  assert.match(html, /前後對比/);
+  assert.match(html, /反直覺真相/);
   assert.match(html, /受眾："\s*\+\s*r\.audience/);
   assert.match(html, /0[–-]2\s*秒/);
   assert.match(html, /中段/);
@@ -252,10 +283,21 @@ test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time s
   assert.match(html, /save/);
   assert.match(html, /share/);
   assert.match(html, /interactionGoal:\s*""/);
-  assert.match(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
-  assert.match(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
+  assert.doesNotMatch(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.doesNotMatch(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
   assert.doesNotMatch(html, /先揀齊四組選項（結構\+角度、片長\+字幕風格、CTA 呈現、B-roll），再生成完整內容。/);
-  assert.match(html, /目前由 AI 自動判斷，之後可手動調整/);
+  assert.match(html, /你揀嘅互動目標/);
+  assert.match(html, /可喺 Step 0 CTA picker 改/);
+});
+
+test("reels-studio Stage B uses user interactionGoal + Stage C split to Step 3", async () => {
+  const html = await readHtml();
+  assert.match(html, /你揀嘅互動目標/);
+  assert.match(html, /圍繞住佢設計 CTA/);
+  assert.match(html, /可喺 Step 0 CTA picker 改/);
+  assert.doesNotMatch(html, /AI 揀嘅互動目標/);
+  assert.doesNotMatch(html, /r\.interactionGoal = data\.interactionGoal/);
+  assert.doesNotMatch(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
 });
 
 test("reels-studio Stage C script review + polish", async () => {
@@ -288,4 +330,48 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /用修正版覆寫現有腳本/);
   assert.match(html, /用修正版覆寫現有 caption/);
   assert.match(html, /copy\.scriptReview = null/);
+});
+
+test("reels-studio v3 migration + inferWizardStep + SW v17", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v17/);
+  assert.match(html, /const REEL_SCHEMA_VERSION = 3/);
+  assert.match(html, /function migrateReelToV3\(/);
+  assert.match(html, /function inferWizardStep\(/);
+  assert.match(html, /reelsSchemaVersion/);
+  assert.match(html, /r\.wizardStep - 1/);
+  assert.match(html, /if \(r\.wizardStep === undefined\)/);
+  assert.match(html, /copy\.wizardStep = 0/);
+  assert.match(html, /directionCandidates:\s*\[\]/);
+  assert.match(html, /contentDirection:\s*""/);
+  assert.match(html, /contentDirectionAt:\s*null/);
+});
+
+test("reels-studio Stage A 拆分 + 方向建議 + aiPicks 6 格", async () => {
+  const html = await readHtml();
+  assert.match(html, /id="pick-structure"/);
+  assert.match(html, /id="pick-angle"/);
+  assert.match(html, /id="pick-length"/);
+  assert.match(html, /id="gen-directions"/);
+  assert.match(html, /id="direction-candidates"/);
+  assert.match(html, /function generateAiDirections\(/);
+  assert.match(html, /function regenerateDirections\(/);
+  assert.match(html, /function renderDirectionCandidates\(/);
+  assert.match(html, /DIRECTION_SCHEMA\s*=/);
+  assert.match(html, /label:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /r\.contentDirection = candidate\.label/);
+  assert.match(html, /重新生成方向/);
+  assert.match(html, /生成方向建議/);
+  assert.match(html, /subtitleStyles/);
+  assert.match(html, /先揀結構同角度/);
+});
+
+test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
+  const html = await readHtml();
+  assert.match(html, /aiPicks:\s*\{\s*structure:\s*null,\s*angle:\s*null,\s*lengthSec:\s*null,\s*subtitleStyle:\s*null,\s*ctaStyle:\s*null,\s*broll:\s*null\s*\}/);
+  assert.match(html, /structureAngle\?.structure/);
+  assert.match(html, /lengthStyle\?.lengthSec/);
+  assert.doesNotMatch(html, /structureAngles:/);
+  assert.match(html, /canAdvanceToStep2\(r\)\s*\{\s*const p = r\.aiPicks \|\| \{\};\s*return !!\(p\.structure && p\.angle && p\.lengthSec != null && p\.subtitleStyle && p\.ctaStyle && p\.broll\);\s*\}/);
 });
