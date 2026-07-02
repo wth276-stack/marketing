@@ -47,3 +47,15 @@ test("reels-studio exposes required standalone app structure", async () => {
 
   assert.match(html, /唔好輸入客人全名、電話、完整對話或相片/);
 });
+
+test("reels-studio declares storage and core data functions", async () => {
+  const html = await readHtml();
+
+  assert.match(html, /const STORAGE = "jessi-reels-studio-v1"/);
+  assert.match(html, /localStorage\.setItem\(STORAGE/);
+  assert.match(html, /jessi-shared-context/);
+
+  for (const name of ["loadReels", "saveReels", "addReel", "renderReelList"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+});

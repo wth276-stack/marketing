@@ -80,7 +80,137 @@
     </main>
   </div>
   <script>
-    // placeholder — 後續 task 填入
+    const STORAGE = "jessi-reels-studio-v1";
+    const SHARED_CONTEXT_KEY = "jessi-shared-context";
+    const SCHEMA_VERSION = 1;
+    const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"];
+    const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
+    const SCORE_LABELS = {
+      hook: "頭 2 秒留人", retention: "整體留存", rhythm: "節奏密度",
+      subtitle: "字幕清晰", audio: "收音質素", ctaClarity: "CTA 清晰", shareability: "save/share 價值"
+    };
+    const CHECKLIST_KEYS = [
+      "hook2s", "oneMessage", "vertical916", "centerSubject", "shortShots",
+      "clearAudio", "subtitle", "trimDead", "musicLicense", "lengthFit",
+      "remember1", "remember2", "remember3", "remember4", "remember5", "remember6", "remember7",
+      "structIntro", "structBody", "structEnd"
+    ];
+
+    function uid() {
+      return "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+
+    function newReel() {
+      const now = new Date().toISOString();
+      const reel = {
+        id: uid(),
+        createdAt: now,
+        updatedAt: now,
+        status: "planning",
+        title: "",
+        structure: "反差型",
+        hook: "",
+        coreMessage: "",
+        segments: [{ label: "", shot: "", durationSec: 0, note: "" }],
+        summary: "",
+        cta: "",
+        caption: "",
+        hashtags: [],
+        coverText: "",
+        checklist: {},
+        score: {},
+        scoreNotes: "",
+        publishedAt: null
+      };
+      for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
+      for (const k of SCORE_KEYS) reel.score[k] = 0;
+      return reel;
+    }
+
+    function normalize(state) {
+      if (!state || typeof state !== "object") state = { reels: [], activeReelId: null };
+      if (!Array.isArray(state.reels)) state.reels = [];
+      state.reels = state.reels.map((r) => {
+        const base = newReel();
+        const merged = { ...base, ...r };
+        merged.checklist = { ...base.checklist, ...(r.checklist || {}) };
+        merged.score = { ...base.score, ...(r.score || {}) };
+        if (!Array.isArray(merged.segments) || !merged.segments.length) {
+          merged.segments = [{ label: "", shot: "", durationSec: 0, note: "" }];
+        }
+        if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
+        return merged;
+      });
+      if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
+        state.activeReelId = state.reels[0]?.id || null;
+      }
+      if (!state.activeReelId && state.reels.length) state.activeReelId = state.reels[0].id;
+      return state;
+    }
+
+    function loadReels() {
+      try {
+        return normalize(JSON.parse(localStorage.getItem(STORAGE) || "{}"));
+      } catch {
+        return normalize({});
+      }
+    }
+
+    function saveReels(state) {
+      localStorage.setItem(STORAGE, JSON.stringify(state));
+    }
+
+    let state = loadReels();
+
+    function activeReel() {
+      return state.reels.find((r) => r.id === state.activeReelId) || null;
+    }
+
+    function addReel() {
+      const reel = newReel();
+      state.reels.push(reel);
+      state.activeReelId = reel.id;
+      saveReels(state);
+      renderReelList();
+      renderPlan();
+      renderShootChecklist();
+      renderReview();
+    }
+
+    function renderReelList() {
+      const box = document.getElementById("reel-items");
+      if (!state.reels.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">未有 Reel，撳「+ 新增 Reel」開始。</p>';
+        return;
+      }
+      box.innerHTML = state.reels
+        .map(
+          (r) =>
+            `<div class="reel-item${r.id === state.activeReelId ? " active" : ""}" data-id="${r.id}">` +
+            `<div style="font-weight:700">${escapeHtml(r.title || "（未命名）")}</div>` +
+            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · ${r.status}</div>` +
+            `</div>`
+        )
+        .join("");
+      box.querySelectorAll(".reel-item").forEach((el) => {
+        el.addEventListener("click", () => {
+          state.activeReelId = el.dataset.id;
+          saveReels(state);
+          renderReelList();
+          renderPlan();
+          renderShootChecklist();
+          renderReview();
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    document.getElementById("new-reel").addEventListener("click", addReel);
+    renderReelList();
   </script>
 </body>
 </html>
