@@ -269,6 +269,12 @@ test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time s
   const html = await readHtml();
   assert.match(html, /教學型/);
   assert.match(html, /故事型/);
+  assert.match(html, /對比型/);
+  assert.match(html, /步驟型/);
+  assert.match(html, /const ANGLES = \[/);
+  assert.match(html, /const LENGTH_SECONDS = \[/);
+  assert.match(html, /前後對比/);
+  assert.match(html, /反直覺真相/);
   assert.match(html, /受眾："\s*\+\s*r\.audience/);
   assert.match(html, /0[–-]2\s*秒/);
   assert.match(html, /中段/);
@@ -329,4 +335,32 @@ test("reels-studio v3 migration + inferWizardStep + SW v17", async () => {
   assert.match(html, /directionCandidates:\s*\[\]/);
   assert.match(html, /contentDirection:\s*""/);
   assert.match(html, /contentDirectionAt:\s*null/);
+});
+
+test("reels-studio Stage A 拆分 + 方向建議 + aiPicks 6 格", async () => {
+  const html = await readHtml();
+  assert.match(html, /id="pick-structure"/);
+  assert.match(html, /id="pick-angle"/);
+  assert.match(html, /id="pick-length"/);
+  assert.match(html, /id="gen-directions"/);
+  assert.match(html, /id="direction-candidates"/);
+  assert.match(html, /function generateAiDirections\(/);
+  assert.match(html, /function regenerateDirections\(/);
+  assert.match(html, /function renderDirectionCandidates\(/);
+  assert.match(html, /DIRECTION_SCHEMA\s*=/);
+  assert.match(html, /label:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /r\.contentDirection = candidate\.label/);
+  assert.match(html, /重新生成方向/);
+  assert.match(html, /生成方向建議/);
+  assert.match(html, /subtitleStyles/);
+  assert.match(html, /先揀結構同角度/);
+});
+
+test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
+  const html = await readHtml();
+  assert.match(html, /aiPicks:\s*\{\s*structure:\s*null,\s*angle:\s*null,\s*lengthSec:\s*null,\s*subtitleStyle:\s*null,\s*ctaStyle:\s*null,\s*broll:\s*null\s*\}/);
+  assert.match(html, /structureAngle\?.structure/);
+  assert.match(html, /lengthStyle\?.lengthSec/);
+  assert.doesNotMatch(html, /structureAngles:/);
+  assert.match(html, /canAdvanceToStep2\(r\)\s*\{\s*const p = r\.aiPicks \|\| \{\};\s*return !!\(p\.structure && p\.angle && p\.lengthSec != null && p\.subtitleStyle && p\.ctaStyle && p\.broll\);\s*\}/);
 });
