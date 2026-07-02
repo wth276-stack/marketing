@@ -442,8 +442,9 @@
           location.reload();
         } catch (error) {
           alert("JSON 匯入失敗：" + (error.message || "格式不正確"));
+        } finally {
+          event.target.value = "";
         }
-        event.target.value = "";
       };
       reader.readAsText(file);
     }
