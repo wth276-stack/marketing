@@ -77,6 +77,12 @@
     .wizard-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--line); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
     .wizard-dot.active { background: var(--accent); }
     .wizard-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
+    .hook-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 6px 0; }
+    .hook-card.selected { border-color: var(--accent); background: rgba(201,107,138,0.08); }
+    .hook-card .hook-type { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+    .hook-card .hook-text { margin-bottom: 6px; }
+    .hook-card .hook-meta { font-size: 12px; color: var(--muted); margin: 2px 0; }
+    .hook-card .use-hook { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
   </style>
 </head>
 <body>
@@ -181,6 +187,10 @@
         title: "",
         structure: "反差型",
         hook: "",
+        audience: "",
+        tone: "香港廣東話、自然、簡短",
+        hookCandidates: [],
+        hookCandidatesAt: null,
         coreMessage: "",
         segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
@@ -223,6 +233,7 @@
           note: s.note || ""
         }));
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
+        if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         }
@@ -362,6 +373,97 @@
       ctaStyle: "ctaStyles",
       broll: "brollSets"
     };
+
+    const HOOK_SCHEMA = {
+      type: "object",
+      properties: {
+        hooks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              text: { type: "string" },
+              reason: { type: "string" },
+              risk: { type: "string" },
+              fitGoal: { type: "string" }
+            },
+            required: ["type", "text", "reason", "risk", "fitGoal"]
+          }
+        }
+      },
+      required: ["hooks"]
+    };
+
+    function hookPrompt(r) {
+      return [
+        "你是香港美容業 IG Reels hook 策劃。根據以下輸入，出 5 個唔同類型嘅 hook 候選，每個附留人理由、風險、適合互動目標。繁體中文、廣東話自然語氣。",
+        "輸入：",
+        "主題：" + r.title,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
+        "",
+        "出 5 個 hook，類型分別係：痛點、反差、結果、好奇、身份認同（各 1 個）。",
+        "輸出 JSON：hooks 陣列，每項含 type（痛點/反差/結果/好奇/身份認同）、text（hook 文字）、reason（留人理由）、risk（風險：會唔會太標題黨/太闊/太似廣告）、fitGoal（適合互動目標：留言/save/share 三揀一）。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiHooks() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.title.trim()) { alert("請先填主題。"); return; }
+      const btn = document.getElementById("ai-generate-hooks");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(hookPrompt(r), HOOK_SCHEMA);
+        r.hookCandidates = Array.isArray(data.hooks) ? data.hooks : [];
+        r.hookCandidatesAt = new Date().toISOString();
+        r.updatedAt = r.hookCandidatesAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.hookCandidates?.length ? "重新生成 Hook" : "AI 生成 Hook"); }
+      }
+    }
+
+    function regenerateHooks() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.hookCandidates && r.hookCandidates.length && !confirm("重新生成會拎走現有 Hook 候選，繼續？")) return;
+      generateAiHooks();
+    }
+
+    function renderHookCandidates() {
+      const box = document.getElementById("hook-candidates");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !Array.isArray(r.hookCandidates) || !r.hookCandidates.length) { box.innerHTML = ""; return; }
+      box.innerHTML = r.hookCandidates.map((h, i) => {
+        const sel = r.hook && r.hook === h.text;
+        return `<div class="hook-card${sel ? " selected" : ""}" data-i="${i}">
+          <div class="hook-type">${escapeHtml(h.type || "")}</div>
+          <div class="hook-text">${escapeHtml(h.text || "")}</div>
+          <div class="hook-meta">留人理由：${escapeHtml(h.reason || "")}</div>
+          <div class="hook-meta">風險：${escapeHtml(h.risk || "")}</div>
+          <div class="hook-meta">適合：${escapeHtml(h.fitGoal || "")}</div>
+          <button type="button" class="use-hook">用呢個</button>
+        </div>`;
+      }).join("");
+      box.querySelectorAll(".use-hook").forEach((b) => {
+        b.addEventListener("click", () => {
+          const r2 = activeReel(); if (!r2) return;
+          const card = b.closest(".hook-card");
+          const i = Number(card.dataset.i);
+          if (!r2.hookCandidates || !r2.hookCandidates[i]) return;
+          r2.hook = r2.hookCandidates[i].text;
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderPlan();
+        });
+      });
+    }
 
     const STAGE_A_SCHEMA = {
       type: "object",
@@ -658,6 +760,14 @@
           <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}</div>
           <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
+            <div class="field"><label>目標受眾</label><input id="p-audience" value="${escapeHtml(r.audience)}"></div>
+            <div class="field"><label>語氣</label><input id="p-tone" value="${escapeHtml(r.tone)}"></div>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-generate-hooks">${r.hookCandidates && r.hookCandidates.length ? "重新生成 Hook" : "AI 生成 Hook"}</button>
+              </div>
+              <div id="hook-candidates"></div>
+            </div>
             <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
           </div>
           <div class="wizard-step" data-step-n="1">
@@ -722,6 +832,8 @@
         });
       };
       bind("#p-title", "title");
+      bind("#p-audience", "audience");
+      bind("#p-tone", "tone");
       bind("#p-structure", "structure");
       bind("#p-hook", "hook");
       bind("#p-core", "coreMessage");
@@ -787,6 +899,8 @@
           goWizardStep(target);
         });
       });
+      const genHooksBtn = panel.querySelector("#ai-generate-hooks");
+      if (genHooksBtn) genHooksBtn.addEventListener("click", regenerateHooks);
       const genOptsBtn = panel.querySelector("#ai-generate-options");
       if (genOptsBtn) genOptsBtn.addEventListener("click", regenerateOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
@@ -799,6 +913,7 @@
       if (asmScrBtn) asmScrBtn.addEventListener("click", () => assembleScript(false));
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
+      renderHookCandidates();
       renderAiOptions();
     }
 
@@ -957,6 +1072,8 @@
       copy.updatedAt = copy.createdAt;
       copy.status = "planning";
       copy.wizardStep = 0;
+      copy.hookCandidates = [];
+      copy.hookCandidatesAt = null;
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);

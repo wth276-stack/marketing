@@ -213,3 +213,29 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v16", async () => {
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\)/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\)/);
 });
+
+test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
+  const html = await readHtml();
+  assert.match(html, /audience:\s*""/);
+  assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
+  assert.match(html, /hookCandidates:\s*\[\]/);
+  assert.match(html, /function generateAiHooks\(/);
+  assert.match(html, /function regenerateHooks\(/);
+  assert.match(html, /function renderHookCandidates\(/);
+  assert.match(html, /重新生成會拎走現有 Hook 候選/);
+  assert.match(html, /r\.hookCandidates\.length \? "重新生成 Hook" : "AI 生成 Hook"/);
+  assert.match(html, /addEventListener\("click", regenerateHooks\)/);
+  assert.match(html, /id="ai-generate-hooks"/);
+  assert.match(html, /id="hook-candidates"/);
+  assert.match(html, /id="p-audience"/);
+  assert.match(html, /id="p-tone"/);
+  assert.match(html, /fitGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /risk:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /受眾："\s*\+\s*r\.audience/);
+  assert.match(html, /語氣："\s*\+\s*r\.tone/);
+  assert.match(html, /留人理由/);
+  assert.match(html, /風險/);
+  assert.match(html, /適合/);
+  assert.match(html, /copy\.hookCandidates = \[\]/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+});
