@@ -453,7 +453,7 @@
         "已揀 CTA 呈現：" + fmt(p.ctaStyle),
         "已揀 B-roll：" + fmt(p.broll),
         "",
-        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 第一行、hashtags 3–8 個、coverText 封面大字。",
+        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IG post caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字。",
         "要求：節奏密、鏡頭 0.5–2 秒、字幕短句分行、9:16 直拍主體放中間、旁白口語化。嚴格跟 JSON schema。"
       ].join("\n");
     }
@@ -824,7 +824,7 @@
         "",
         "總結：" + (r.summary || "（待填）"),
         "CTA：" + (r.cta || "（待填）"),
-        "caption 第一行：" + (r.caption || "（待填）"),
+        "完整 caption：" + (r.caption || "（待填）"),
         "hashtag：" + (r.hashtags.length ? r.hashtags.join(" ") : "（待填）"),
         "封面大字：" + (r.coverText || "（待填）"),
         "",
