@@ -321,6 +321,7 @@
         ap.subtitleStyle ??= null;
         ap.ctaStyle ??= null;
         ap.broll ??= null;
+        if (ap.structure) merged.structure = ap.structure;
         return merged;
       });
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
