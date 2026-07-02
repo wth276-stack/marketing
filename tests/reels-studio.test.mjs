@@ -239,3 +239,21 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /copy\.hookCandidates = \[\]/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
 });
+
+test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time structure + interactionGoal", async () => {
+  const html = await readHtml();
+  assert.match(html, /教學型/);
+  assert.match(html, /故事型/);
+  assert.match(html, /受眾："\s*\+\s*r\.audience/);
+  assert.match(html, /0[–-]2\s*秒/);
+  assert.match(html, /中段/);
+  assert.match(html, /互動目標/);
+  assert.match(html, /留言/);
+  assert.match(html, /save/);
+  assert.match(html, /share/);
+  assert.match(html, /interactionGoal:\s*""/);
+  assert.match(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
+  assert.doesNotMatch(html, /先揀齊四組選項（結構\+角度、片長\+字幕風格、CTA 呈現、B-roll），再生成完整內容。/);
+  assert.match(html, /目前由 AI 自動判斷，之後可手動調整/);
+});

@@ -83,6 +83,8 @@
     .hook-card .hook-text { margin-bottom: 6px; }
     .hook-card .hook-meta { font-size: 12px; color: var(--muted); margin: 2px 0; }
     .hook-card .use-hook { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
+    .interaction-goal { padding: 8px; border: 1px dashed var(--line); border-radius: 8px; background: #fff8fb; }
+    .goal-hint { font-size: 12px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -135,7 +137,7 @@
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
-    const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"];
+    const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型"];
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
       hook: "頭 2 秒留人", retention: "整體留存", rhythm: "節奏密度",
@@ -191,6 +193,7 @@
         tone: "香港廣東話、自然、簡短",
         hookCandidates: [],
         hookCandidatesAt: null,
+        interactionGoal: "",
         coreMessage: "",
         segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
@@ -234,6 +237,7 @@
         }));
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
+        if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         }
@@ -484,8 +488,10 @@
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
         "CTA：" + r.cta,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
         "",
-        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
+        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型/教學型/故事型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
       ].join("\n");
     }
 
@@ -558,14 +564,15 @@
         summary: { type: "string" },
         caption: { type: "string" },
         hashtags: { type: "array", items: { type: "string" } },
-        coverText: { type: "string" }
+        coverText: { type: "string" },
+        interactionGoal: { type: "string" }
       },
       required: ["segments", "summary", "caption", "hashtags", "coverText"]
     };
 
     function stageBPrompt(r) {
       const p = r.aiPicks || {};
-      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀）");
+      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀，由你按主題判斷）");
       return [
         "你是香港美容業 IG Reels 編導。根據以下輸入同已揀嘅創作選項，輸出完整可拍內容。繁體中文。",
         "輸入：",
@@ -573,12 +580,18 @@
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
         "CTA：" + r.cta,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
         "已揀結構+角度：" + fmt(p.structureAngle),
         "已揀片長+字幕風格：" + fmt(p.lengthStyle),
         "已揀 CTA 呈現：" + fmt(p.ctaStyle),
         "已揀 B-roll：" + fmt(p.broll),
         "",
-        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IG post caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字。",
+        "時間結構（必須跟）：0–2 秒 Hook（用上面鉤子）/ 2–4 秒承諾「點解要睇落去」/ 4–15 秒連續小答案每 3–5 秒一個 payoff / 15–25 秒加深反轉補最易錯位 / 最後 3–5 秒總結 + CTA。",
+        "7 留人法（必須跟）：hook 後承諾、每 3 秒變化、唔早講晒答案、問題→答案→再問題、中段第二 hook、結尾互動、唔講廢話。",
+        "單一互動目標：呢條片揀一個主要互動目標——留言 / save / share 三揀一，並圍繞住佢設計 CTA。唔好同時叫人留言 + save + share。請把揀咗嘅目標寫入 interactionGoal 欄位。",
+        "",
+        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IGpost caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字、interactionGoal（留言/save/share 三揀一）。",
         "要求：節奏密、鏡頭 0.5–2 秒、字幕短句分行、9:16 直拍主體放中間、旁白口語化。嚴格跟 JSON schema。"
       ].join("\n");
     }
@@ -586,11 +599,6 @@
     async function generateAiContent() {
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      const p = r.aiPicks || {};
-      if (!p.structureAngle || !p.lengthStyle || !p.ctaStyle || !p.broll) {
-        alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll），再生成完整內容。");
-        return;
-      }
       const btn = document.getElementById("ai-generate-content");
       if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
       try {
@@ -608,6 +616,8 @@
         r.caption = data.caption || "";
         r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
         r.coverText = data.coverText || "";
+        r.interactionGoal = data.interactionGoal || "";
+        const p = r.aiPicks || {};
         if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
         r.aiGeneratedAt = new Date().toISOString();
         r.updatedAt = r.aiGeneratedAt;
@@ -786,6 +796,7 @@
             </div>
           </div>
           <div class="wizard-step" data-step-n="3">
+            ${r.interactionGoal ? `<div class="field"><label>AI 揀嘅互動目標</label><div class="interaction-goal">${escapeHtml(r.interactionGoal)} <span class="goal-hint">（目前由 AI 自動判斷，之後可手動調整）</span></div></div>` : ""}
             <div class="field"><label>逐鏡頭 shot list</label>
               <div id="seg-list">${segs}</div>
               <button type="button" id="seg-add">+ 加鏡頭</button>
@@ -1074,6 +1085,7 @@
       copy.wizardStep = 0;
       copy.hookCandidates = [];
       copy.hookCandidatesAt = null;
+      copy.interactionGoal = "";
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);
