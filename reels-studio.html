@@ -517,6 +517,20 @@
       }
     }
 
+    function regenerateOptions() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.aiOptions && !confirm("重新生成會拎走現有揀揀，繼續？")) return;
+      generateAiOptions();
+    }
+
+    function regenerateContent() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.aiGeneratedAt && !confirm("重新生成會覆寫現有逐鏡/caption/hashtag/封面，繼續？")) return;
+      generateAiContent();
+    }
+
     function assembleCaption() {
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
@@ -646,7 +660,7 @@
           <div class="wizard-step" data-step-n="2">
             <div class="ai-block">
               <div class="toolbar">
-                <button type="button" id="ai-generate-options">AI 生成選項</button>
+                <button type="button" id="ai-generate-options">${r.aiOptions ? "重新生成選項" : "AI 生成選項"}</button>
               </div>
               <div id="ai-picks"></div>
             </div>
@@ -676,7 +690,7 @@
             <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
             <div class="ai-block">
               <div class="toolbar">
-                <button type="button" class="primary" id="ai-generate-content">生成完整內容</button>
+                <button type="button" class="primary" id="ai-generate-content">${r.aiGeneratedAt ? "重新生成內容" : "生成完整內容"}</button>
               </div>
             </div>
           </div>
@@ -762,9 +776,9 @@
         });
       });
       const genOptsBtn = panel.querySelector("#ai-generate-options");
-      if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
+      if (genOptsBtn) genOptsBtn.addEventListener("click", regenerateOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
-      if (genContentBtn) genContentBtn.addEventListener("click", generateAiContent);
+      if (genContentBtn) genContentBtn.addEventListener("click", regenerateContent);
       const asmBtn = panel.querySelector("#assemble-caption");
       if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
       const cpyBtn = panel.querySelector("#copy-caption");

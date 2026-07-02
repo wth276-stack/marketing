@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v14", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v15", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v14/);
+  assert.match(sw, /jessi-workflow-cache-v15/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,10 +164,10 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v14", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v15", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v14/);
+  assert.match(sw, /jessi-workflow-cache-v15/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -192,4 +192,18 @@ test("reels-studio 3-step wizard structure + navigation", async () => {
   assert.match(html, /copy\.wizardStep = 1/);
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-generate-content"/);
+});
+
+test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(html, /function regenerateOptions\(/);
+  assert.match(html, /function regenerateContent\(/);
+  assert.match(html, /重新生成會拎走現有揀揀/);
+  assert.match(html, /重新生成會覆寫現有逐鏡\/caption\/hashtag\/封面/);
+  assert.match(html, /r\.aiOptions \? "重新生成選項" : "AI 生成選項"/);
+  assert.match(html, /r\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"/);
+  assert.match(html, /addEventListener\("click", regenerateOptions\)/);
+  assert.match(html, /addEventListener\("click", regenerateContent\)/);
 });
