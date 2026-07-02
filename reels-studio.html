@@ -95,6 +95,31 @@
       "remember1", "remember2", "remember3", "remember4", "remember5", "remember6", "remember7",
       "structIntro", "structBody", "structEnd"
     ];
+    const CHECKLIST_LABELS = {
+      hook2s: "頭 1–2 秒有鉤子",
+      oneMessage: "一條片只講一個重點",
+      vertical916: "9:16 直片拍攝",
+      centerSubject: "人/字/重點畫面放中間",
+      shortShots: "拍多啲短鏡頭（0.5–2 秒）",
+      clearAudio: "聲音要清過畫面",
+      subtitle: "一定要落字幕",
+      trimDead: "剪走所有「等」嘅位",
+      musicLicense: "音樂要睇 license（唔好亂用熱門歌）",
+      lengthFit: "片長冇廢話最好",
+      remember1: "開頭 2 秒要有鉤子",
+      remember2: "一條片只講一件事",
+      remember3: "9:16 直拍，主體放中間",
+      remember4: "剪走廢位，節奏要密",
+      remember5: "字幕一定要清楚",
+      remember6: "商業內容音樂要睇 license",
+      remember7: "每週固定測試 hook/片長/封面/caption/發布時間",
+      structIntro: "開頭鉤子已寫",
+      structBody: "3 個段落已填",
+      structEnd: "總結 + CTA 已填"
+    };
+    const TECHNIQUE_KEYS = CHECKLIST_KEYS.slice(0, 10);
+    const REMEMBER_KEYS = CHECKLIST_KEYS.slice(10, 17);
+    const STRUCT_KEYS = CHECKLIST_KEYS.slice(17);
 
     function uid() {
       return "r_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -293,6 +318,45 @@
       });
     }
 
+    function renderShootChecklist() {
+      const panel = document.getElementById("shoot-panel");
+      const r = activeReel();
+      if (!r) {
+        panel.innerHTML = '<p style="color:#7a6f7a">請先新增或揀選一條 Reel。</p>';
+        return;
+      }
+      const group = (keys, title) =>
+        `<h3 style="margin:14px 0 6px;font-size:15px">${title}</h3>` +
+        keys
+          .map(
+            (k) =>
+              `<label style="display:block;padding:6px 0;cursor:pointer">` +
+              `<input type="checkbox" data-key="${k}" ${r.checklist[k] ? "checked" : ""}> ${CHECKLIST_LABELS[k]}</label>`
+          )
+          .join("");
+      panel.innerHTML = `<div class="progress"><div style="width:${checklistPct(r)}%"></div></div>` +
+        group(TECHNIQUE_KEYS, "10 拍攝技巧") +
+        group(REMEMBER_KEYS, "7 記住") +
+        group(STRUCT_KEYS, "結構自查");
+      panel.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+        el.addEventListener("change", () => {
+          r.checklist[el.dataset.key] = el.checked;
+          r.updatedAt = new Date().toISOString();
+          saveReels(state);
+          panel.querySelector(".progress > div").style.width = checklistPct(r) + "%";
+          if (r.status === "planning") {
+            r.status = "shooting";
+            renderReelList();
+          }
+        });
+      });
+    }
+
+    function checklistPct(r) {
+      const done = CHECKLIST_KEYS.filter((k) => r.checklist[k]).length;
+      return Math.round((done / CHECKLIST_KEYS.length) * 100);
+    }
+
     function buildAiBrief() {
       const r = activeReel();
       if (!r) return "";
@@ -362,6 +426,15 @@
     });
     document.getElementById("import-theme").addEventListener("click", importWeekTheme);
     renderPlan();
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+    renderShootChecklist();
   </script>
 </body>
 </html>

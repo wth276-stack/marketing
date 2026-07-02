@@ -71,3 +71,18 @@ test("reels-studio declares plan panel, AI brief, and theme import", async () =>
     assert.match(html, new RegExp(s), `missing structure ${s}`);
   }
 });
+
+test("reels-studio declares shoot checklist with technique and remember keywords", async () => {
+  const html = await readHtml();
+
+  assert.match(html, /function renderShootChecklist\(/);
+
+  // 10 技巧關鍵字
+  for (const t of ["頭 1–2 秒", "一個重點", "9:16", "中間", "短鏡頭", "聲音", "字幕", "廢位", "音樂", "片長"]) {
+    assert.match(html, new RegExp(t), `missing technique keyword ${t}`);
+  }
+  // 7 記住關鍵字
+  for (const t of ["鉤子", "一件事", "直拍", "節奏", "字幕", "license", "測試"]) {
+    assert.match(html, new RegExp(t), `missing remember keyword ${t}`);
+  }
+});
