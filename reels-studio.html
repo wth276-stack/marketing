@@ -1247,7 +1247,6 @@
       bind("#p-title", "title");
       bind("#p-audience", "audience");
       bind("#p-tone", "tone");
-      bind("#p-structure", "structure");
       bind("#p-hook", "hook");
       bind("#p-core", "coreMessage");
       bind("#p-summary", "summary");
@@ -1266,6 +1265,7 @@
       if (pickStructure) pickStructure.addEventListener("change", () => {
         r.aiPicks = r.aiPicks || {};
         r.aiPicks.structure = pickStructure.value;
+        r.structure = pickStructure.value;
         r.updatedAt = new Date().toISOString();
         saveReels(state);
       });
