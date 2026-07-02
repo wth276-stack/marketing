@@ -59,3 +59,15 @@ test("reels-studio declares storage and core data functions", async () => {
     assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
   }
 });
+
+test("reels-studio declares plan panel, AI brief, and theme import", async () => {
+  const html = await readHtml();
+
+  for (const name of ["renderPlan", "buildAiBrief", "importWeekTheme"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+
+  for (const s of ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"]) {
+    assert.match(html, new RegExp(s), `missing structure ${s}`);
+  }
+});
