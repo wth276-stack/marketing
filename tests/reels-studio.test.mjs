@@ -86,3 +86,11 @@ test("reels-studio declares shoot checklist with technique and remember keywords
     assert.match(html, new RegExp(t), `missing remember keyword ${t}`);
   }
 });
+
+test("reels-studio declares review scorecard", async () => {
+  const html = await readHtml();
+  assert.match(html, /function renderReview\(/);
+  for (const k of ["頭 2 秒留人", "整體留存", "節奏密度", "字幕清晰", "收音質素", "CTA 清晰", "save\/share 價值"]) {
+    assert.match(html, new RegExp(k), `missing score label ${k}`);
+  }
+});

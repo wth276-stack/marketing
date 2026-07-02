@@ -352,6 +352,57 @@
       });
     }
 
+    const SCORE_ADVICE = {
+      hook: "試用反差／結果畫面／問句做頭 2 秒鉤子。",
+      retention: "剪走廢位、縮短鏡頭、每 2 秒一個節奏點。",
+      rhythm: "鏡頭 0.5–2 秒切換，配字幕跳動。",
+      subtitle: "短句分行，跟節奏跳，避免一大段塞畫面。",
+      audio: "收音近啲，太嘈就後期旁白／配字幕。",
+      ctaClarity: "結尾一句明確 CTA：留言／收藏／分享擇一。",
+      shareability: "加清單型或反差型內容，提升 save 價值。"
+    };
+
+    function renderReview() {
+      const panel = document.getElementById("review-panel");
+      const r = activeReel();
+      if (!r) {
+        panel.innerHTML = '<p style="color:#7a6f7a">請先新增或揀選一條 Reel。</p>';
+        return;
+      }
+      const rows = SCORE_KEYS
+        .map(
+          (k) =>
+            `<div class="field"><label>${SCORE_LABELS[k]}</label>
+              <input type="range" min="0" max="5" step="1" data-key="${k}" value="${r.score[k] || 0}">
+              <span data-val="${k}">${r.score[k] || 0}</span> / 5
+              ${r.score[k] && r.score[k] <= 2 ? '<span class="weak"> 弱項：' + SCORE_ADVICE[k] + "</span>" : ""}
+            </div>`
+        )
+        .join("");
+      panel.innerHTML =
+        rows +
+        `<div class="field"><label>評分備註</label><textarea id="r-notes" rows="3">${escapeHtml(r.scoreNotes)}</textarea></div>` +
+        `<button type="button" id="r-save" class="primary" style="padding:8px 14px;border-radius:8px;border:0;background:var(--rose);color:#fff;cursor:pointer">儲存評分</button>`;
+      panel.querySelectorAll('input[type="range"]').forEach((el) => {
+        el.addEventListener("input", () => {
+          r.score[el.dataset.key] = Number(el.value);
+          panel.querySelector(`[data-val="${el.dataset.key}"]`).textContent = el.value;
+          saveReels(state);
+        });
+      });
+      panel.querySelector("#r-notes").addEventListener("input", () => {
+        r.scoreNotes = panel.querySelector("#r-notes").value;
+        saveReels(state);
+      });
+      panel.querySelector("#r-save").addEventListener("click", () => {
+        r.status = "scored";
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderReelList();
+        alert("評分已儲存。");
+      });
+    }
+
     function checklistPct(r) {
       const done = CHECKLIST_KEYS.filter((k) => r.checklist[k]).length;
       return Math.round((done / CHECKLIST_KEYS.length) * 100);
@@ -435,6 +486,7 @@
       });
     });
     renderShootChecklist();
+    renderReview();
   </script>
 </body>
 </html>
