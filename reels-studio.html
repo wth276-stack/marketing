@@ -373,6 +373,7 @@
       try {
         const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA);
         r.aiOptions = data;
+        r.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         r.updatedAt = new Date().toISOString();
         saveReels(state);
         renderAiOptions();
@@ -401,7 +402,7 @@
         }).join("") + `</div>`;
       const html =
         group("結構 + 內容角度", o.structureAngles, "structureAngle", (x) => `<strong>${escapeHtml(x.structure)} · ${escapeHtml(x.angle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
-        group("片長 + 字幕風格", o.lengthStyles, "lengthStyle", (x) => `<strong>${x.lengthSec}秒 · ${escapeHtml(x.subtitleStyle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("片長 + 字幕風格", o.lengthStyles, "lengthStyle", (x) => `<strong>${Number(x.lengthSec) || 0}秒 · ${escapeHtml(x.subtitleStyle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
         group("CTA 呈現方式", o.ctaStyles, "ctaStyle", (x) => `<strong>${escapeHtml(x.style)}</strong> — 「${escapeHtml(x.exampleRead)}」<div class="reason">${escapeHtml(x.reason)}</div>`) +
         group("B-roll 拍攝元素", o.brollSets, "broll", (x) => `<strong>${(x.shots || []).map(escapeHtml).join("、")}</strong><div class="reason">${escapeHtml(x.reason)}</div>`);
       box.innerHTML = html;
