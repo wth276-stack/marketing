@@ -257,3 +257,33 @@ test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time s
   assert.doesNotMatch(html, /先揀齊四組選項（結構\+角度、片長\+字幕風格、CTA 呈現、B-roll），再生成完整內容。/);
   assert.match(html, /目前由 AI 自動判斷，之後可手動調整/);
 });
+
+test("reels-studio Stage C script review + polish", async () => {
+  const html = await readHtml();
+  assert.match(html, /scriptReview:\s*null/);
+  assert.match(html, /scriptReviewAt:\s*null/);
+  assert.match(html, /function reviewScript\(/);
+  assert.match(html, /function regenerateReview\(/);
+  assert.match(html, /function renderScriptReview\(/);
+  assert.match(html, /function applyPolishedScript\(/);
+  assert.match(html, /function applyPolishedCaption\(/);
+  assert.match(html, /重新檢查會拎走現有質檢結果/);
+  assert.match(html, /r\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"/);
+  assert.match(html, /addEventListener\("click", regenerateReview\)/);
+  assert.match(html, /id="ai-review-script"/);
+  assert.match(html, /id="script-review"/);
+  assert.match(html, /id="use-polished-script"/);
+  assert.match(html, /id="use-polished-caption"/);
+  assert.match(html, /時間密度/);
+  assert.match(html, /VO 長度/);
+  assert.match(html, /字幕密度/);
+  assert.match(html, /中段留人/);
+  assert.match(html, /CTA 對應/);
+  assert.match(html, /可拍性/);
+  assert.match(html, /重複度/);
+  assert.match(html, /AI 建議優化/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\)/);
+  assert.match(html, /用修正版覆寫現有腳本/);
+  assert.match(html, /用修正版覆寫現有 caption/);
+  assert.match(html, /copy\.scriptReview = null/);
+});

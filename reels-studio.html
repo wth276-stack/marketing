@@ -85,6 +85,17 @@
     .hook-card .use-hook { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
     .interaction-goal { padding: 8px; border: 1px dashed var(--line); border-radius: 8px; background: #fff8fb; }
     .goal-hint { font-size: 12px; color: var(--muted); }
+    .review-issue { border-left: 3px solid var(--line); padding: 6px 10px; margin: 6px 0; }
+    .review-issue.sev-高 { border-color: #d44; }
+    .review-issue.sev-中 { border-color: #e80; }
+    .review-issue.sev-低 { border-color: var(--line); }
+    .review-issue .area { font-weight: bold; }
+    .review-issue .sev { font-size: 11px; float: right; color: var(--muted); }
+    .review-issue .problem { font-size: 13px; margin-top: 2px; }
+    .polished-block { margin-top: 10px; }
+    .polished-block label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .polished-block textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; box-sizing: border-box; }
+    .polished-block button { margin-top: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -194,6 +205,8 @@
         hookCandidates: [],
         hookCandidatesAt: null,
         interactionGoal: "",
+        scriptReview: null,
+        scriptReviewAt: null,
         coreMessage: "",
         segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
@@ -238,6 +251,7 @@
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
         if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
+        if (merged.scriptReview !== null && typeof merged.scriptReview !== "object") merged.scriptReview = null;
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         }
@@ -647,6 +661,141 @@
       generateAiContent();
     }
 
+    const REVIEW_SCHEMA = {
+      type: "object",
+      properties: {
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              area: { type: "string" },
+              problem: { type: "string" },
+              severity: { type: "string" }
+            },
+            required: ["area", "problem", "severity"]
+          }
+        },
+        polishedScript: { type: "string" },
+        polishedCaption: { type: "string" }
+      },
+      required: ["issues", "polishedScript", "polishedCaption"]
+    };
+
+    function reviewPrompt(r) {
+      const segs = (Array.isArray(r.segments) ? r.segments : [])
+        .map((s, i) => `Step ${i + 1}：${s.label || ""} — 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}（${s.durationSec || 0}秒）`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Reels 質檢編輯。請檢查以下腳本，逐項指出可改善位置，並提供修正版。繁體中文。",
+        "主題：" + r.title,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
+        "AI 揀嘅互動目標：" + (r.interactionGoal || "（未定）"),
+        "",
+        "現有逐鏡：",
+        segs || "（空）",
+        "",
+        "現有腳本：",
+        r.scriptText || "（空）",
+        "",
+        "現有 caption：",
+        r.caption || "（空）",
+        "",
+        "請按以下 8 項 QC 清單逐項檢查，有問題就加入 issues（冇問題就唔加）：",
+        "1. 時間密度：30 秒入面講太多嘢？",
+        "2. VO 長度：一秒塞太多字，旁白太長氣？",
+        "3. 字幕密度：畫面字太多，觀眾睇唔切？",
+        "4. 中段留人：8–12 秒開始悶，冇第二個 hook？",
+        "5. CTA 對應：CTA 同互動目標（" + (r.interactionGoal || "未定") + "）唔對應？",
+        "6. 語氣：太似 AI / 太書面 / 太廣告？",
+        "7. 可拍性：分鏡講得靚但現實拍唔到？",
+        "8. 重複度：成日「你以為 A，其實 B」之類公式化？",
+        "",
+        "輸出 JSON：issues 陣列（每項 area 用上述檢查位名稱、problem 具體描述、severity 為 高/中/低）、polishedScript 修正版腳本、polishedCaption 修正版 caption。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function reviewScript() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.scriptText || !r.scriptText.trim()) { alert("請先生成或填腳本。"); return; }
+      const btn = document.getElementById("ai-review-script");
+      if (btn) { btn.disabled = true; btn.textContent = "檢查中…"; }
+      try {
+        const data = await callGemini(reviewPrompt(r), REVIEW_SCHEMA);
+        r.scriptReview = {
+          issues: Array.isArray(data.issues) ? data.issues : [],
+          polishedScript: data.polishedScript || "",
+          polishedCaption: data.polishedCaption || ""
+        };
+        r.scriptReviewAt = new Date().toISOString();
+        r.updatedAt = r.scriptReviewAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.scriptReview ? "重新檢查腳本" : "AI 檢查腳本"); }
+      }
+    }
+
+    function regenerateReview() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.scriptReview && !confirm("重新檢查會拎走現有質檢結果，繼續？")) return;
+      reviewScript();
+    }
+
+    function renderScriptReview() {
+      const box = document.getElementById("script-review");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.scriptReview) { box.innerHTML = ""; return; }
+      const rev = r.scriptReview;
+      const issues = (Array.isArray(rev.issues) ? rev.issues : []).map((it) => {
+        const sev = it.severity || "低";
+        return `<div class="review-issue sev-${escapeHtml(sev)}"><span class="area">${escapeHtml(it.area || "")}</span><span class="sev">${escapeHtml(sev)}</span><div class="problem">${escapeHtml(it.problem || "")}</div></div>`;
+      }).join("");
+      box.innerHTML = `
+        <h4>AI 建議優化</h4>
+        <div class="review-issues">${issues || "<p style='color:var(--muted);font-size:13px'>未有明顯問題。</p>"}</div>
+        <div class="polished-block">
+          <label>修正版腳本參考</label>
+          <textarea id="polished-script" rows="8">${escapeHtml(rev.polishedScript || "")}</textarea>
+          <button type="button" id="use-polished-script">用修正版腳本</button>
+        </div>
+        <div class="polished-block">
+          <label>修正版 caption 參考</label>
+          <textarea id="polished-caption" rows="6">${escapeHtml(rev.polishedCaption || "")}</textarea>
+          <button type="button" id="use-polished-caption">用修正版 caption</button>
+        </div>`;
+      const ups = box.querySelector("#use-polished-script");
+      if (ups) ups.addEventListener("click", applyPolishedScript);
+      const upc = box.querySelector("#use-polished-caption");
+      if (upc) upc.addEventListener("click", applyPolishedCaption);
+    }
+
+    function applyPolishedScript() {
+      const r = activeReel();
+      if (!r || !r.scriptReview) return;
+      if (!confirm("用修正版覆寫現有腳本？")) return;
+      r.scriptText = r.scriptReview.polishedScript || "";
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
+    function applyPolishedCaption() {
+      const r = activeReel();
+      if (!r || !r.scriptReview) return;
+      if (!confirm("用修正版覆寫現有 caption？")) return;
+      r.caption = r.scriptReview.polishedCaption || "";
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
     function assembleCaption() {
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
@@ -824,6 +973,12 @@
                 <button type="button" class="primary" id="ai-generate-content">${r.aiGeneratedAt ? "重新生成內容" : "生成完整內容"}</button>
               </div>
             </div>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-review-script">${r.scriptReview ? "重新檢查腳本" : "AI 檢查腳本"}</button>
+              </div>
+              <div id="script-review"></div>
+            </div>
           </div>
           <div class="wizard-nav">
             <button type="button" id="wiz-prev">← 上一步</button>
@@ -916,6 +1071,8 @@
       if (genOptsBtn) genOptsBtn.addEventListener("click", regenerateOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
       if (genContentBtn) genContentBtn.addEventListener("click", regenerateContent);
+      const reviewBtn = panel.querySelector("#ai-review-script");
+      if (reviewBtn) reviewBtn.addEventListener("click", regenerateReview);
       const asmBtn = panel.querySelector("#assemble-caption");
       if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
       const cpyBtn = panel.querySelector("#copy-caption");
@@ -925,6 +1082,7 @@
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
       renderHookCandidates();
+      renderScriptReview();
       renderAiOptions();
     }
 
@@ -1086,6 +1244,8 @@
       copy.hookCandidates = [];
       copy.hookCandidatesAt = null;
       copy.interactionGoal = "";
+      copy.scriptReview = null;
+      copy.scriptReviewAt = null;
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);
