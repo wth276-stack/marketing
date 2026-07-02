@@ -124,3 +124,12 @@ test("reels-studio declares AI option generation + pick UI", async () => {
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-picks"/);
 });
+
+test("reels-studio declares Stage B content generation + segment voiceover/subtitle", async () => {
+  const html = await readHtml();
+  assert.match(html, /function generateAiContent\(/);
+  assert.match(html, /id="ai-generate-content"/);
+  assert.match(html, /voiceover/);
+  assert.match(html, /seg-voice/);
+  assert.match(html, /seg-sub/);
+});

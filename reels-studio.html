@@ -37,7 +37,7 @@
     .field { margin: 10px 0; }
     .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
     .field input, .field select, .field textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
-    .seg-row { display: grid; grid-template-columns: 1fr 1fr 80px 1fr auto; gap: 6px; margin: 6px 0; }
+    .seg-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 70px 1fr auto; gap: 6px; margin: 6px 0; }
     .seg-row input { padding: 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
     .toolbar button, .toolbar label { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
@@ -166,7 +166,7 @@
         structure: "反差型",
         hook: "",
         coreMessage: "",
-        segments: [{ label: "", shot: "", durationSec: 0, note: "" }],
+        segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
         cta: "",
         caption: "",
@@ -194,8 +194,16 @@
         merged.checklist = { ...base.checklist, ...(r.checklist || {}) };
         merged.score = { ...base.score, ...(r.score || {}) };
         if (!Array.isArray(merged.segments) || !merged.segments.length) {
-          merged.segments = [{ label: "", shot: "", durationSec: 0, note: "" }];
+          merged.segments = [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }];
         }
+        merged.segments = merged.segments.map((s) => ({
+          label: s.label || "",
+          shot: s.shot || "",
+          voiceover: s.voiceover || "",
+          subtitle: s.subtitle || "",
+          durationSec: Number(s.durationSec) || 0,
+          note: s.note || ""
+        }));
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
@@ -414,6 +422,77 @@
       });
     }
 
+    const STAGE_B_SCHEMA = {
+      type: "object",
+      properties: {
+        segments: { type: "array", items: { type: "object", properties: { label: { type: "string" }, shot: { type: "string" }, voiceover: { type: "string" }, subtitle: { type: "string" }, durationSec: { type: "integer" } }, required: ["label", "shot", "voiceover", "subtitle", "durationSec"] } },
+        summary: { type: "string" },
+        caption: { type: "string" },
+        hashtags: { type: "array", items: { type: "string" } },
+        coverText: { type: "string" }
+      },
+      required: ["segments", "summary", "caption", "hashtags", "coverText"]
+    };
+
+    function stageBPrompt(r) {
+      const p = r.aiPicks || {};
+      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀）");
+      return [
+        "你是香港美容業 IG Reels 編導。根據以下輸入同已揀嘅創作選項，輸出完整可拍內容。繁體中文。",
+        "輸入：",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "CTA：" + r.cta,
+        "已揀結構+角度：" + fmt(p.structureAngle),
+        "已揀片長+字幕風格：" + fmt(p.lengthStyle),
+        "已揀 CTA 呈現：" + fmt(p.ctaStyle),
+        "已揀 B-roll：" + fmt(p.broll),
+        "",
+        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 第一行、hashtags 3–8 個、coverText 封面大字。",
+        "要求：節奏密、鏡頭 0.5–2 秒、字幕短句分行、9:16 直拍主體放中間、旁白口語化。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiContent() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      const p = r.aiPicks || {};
+      if (!p.structureAngle || !p.lengthStyle || !p.ctaStyle || !p.broll) {
+        alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll），再生成完整內容。");
+        return;
+      }
+      const btn = document.getElementById("ai-generate-content");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(stageBPrompt(r), STAGE_B_SCHEMA);
+        r.segments = (Array.isArray(data.segments) ? data.segments : []).map((s) => ({
+          label: s.label || "",
+          shot: s.shot || "",
+          voiceover: s.voiceover || "",
+          subtitle: s.subtitle || "",
+          durationSec: Number(s.durationSec) || 0,
+          note: ""
+        }));
+        if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+        r.summary = data.summary || "";
+        r.caption = data.caption || "";
+        r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
+        r.coverText = data.coverText || "";
+        if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
+        r.aiGeneratedAt = new Date().toISOString();
+        r.updatedAt = r.aiGeneratedAt;
+        saveReels(state);
+        renderReelList();
+        renderPlan();
+        alert("已生成完整內容，可喺下面欄位微調。");
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "生成完整內容"; }
+      }
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -426,7 +505,9 @@
           (s, i) =>
             `<div class="seg-row" data-i="${i}">
               <input class="seg-label" placeholder="段落標題" value="${escapeHtml(s.label)}">
-              <input class="seg-shot" placeholder="鏡頭內容" value="${escapeHtml(s.shot)}">
+              <input class="seg-shot" placeholder="畫面" value="${escapeHtml(s.shot)}">
+              <input class="seg-voice" placeholder="旁白" value="${escapeHtml(s.voiceover || "")}">
+              <input class="seg-sub" placeholder="字幕" value="${escapeHtml(s.subtitle || "")}">
               <input class="seg-dur" type="number" min="0" placeholder="秒" value="${s.durationSec || 0}">
               <input class="seg-note" placeholder="備註" value="${escapeHtml(s.note)}">
               <button type="button" class="seg-del">✕</button>
@@ -437,6 +518,7 @@
         <div class="ai-block">
           <div class="toolbar">
             <button type="button" id="ai-generate-options">AI 生成選項</button>
+            <button type="button" class="primary" id="ai-generate-content">生成完整內容</button>
           </div>
           <div id="ai-picks"></div>
         </div>`;
@@ -484,6 +566,8 @@
           r.segments[i] = {
             label: row.querySelector(".seg-label").value,
             shot: row.querySelector(".seg-shot").value,
+            voiceover: row.querySelector(".seg-voice").value,
+            subtitle: row.querySelector(".seg-sub").value,
             durationSec: Number(row.querySelector(".seg-dur").value) || 0,
             note: row.querySelector(".seg-note").value
           };
@@ -493,18 +577,20 @@
         row.querySelectorAll("input").forEach((el) => el.addEventListener("input", upd));
         row.querySelector(".seg-del").addEventListener("click", () => {
           r.segments.splice(i, 1);
-          if (!r.segments.length) r.segments.push({ label: "", shot: "", durationSec: 0, note: "" });
+          if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
           saveReels(state);
           renderPlan();
         });
       });
       panel.querySelector("#seg-add").addEventListener("click", () => {
-        r.segments.push({ label: "", shot: "", durationSec: 0, note: "" });
+        r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
         saveReels(state);
         renderPlan();
       });
       const genOptsBtn = panel.querySelector("#ai-generate-options");
       if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
+      const genContentBtn = panel.querySelector("#ai-generate-content");
+      if (genContentBtn) genContentBtn.addEventListener("click", generateAiContent);
       renderAiOptions();
     }
 
@@ -680,7 +766,7 @@
       const r = activeReel();
       if (!r) return "";
       const segs = r.segments
-        .map((s, i) => `Step ${i + 1}：${s.label || "（段落）"} — ${s.shot || ""}（${s.durationSec || "?"}秒）${s.note ? " // " + s.note : ""}`)
+        .map((s, i) => `Step ${i + 1}：${s.label || "（段落）"} — 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}（${s.durationSec || "?"}秒）${s.note ? " // " + s.note : ""}`)
         .join("\n");
       return [
         "【Reels 拍片 brief — Jessi Beauty】",
