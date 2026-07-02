@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v15", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,20 +164,22 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v15", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
-test("reels-studio 3-step wizard structure + navigation", async () => {
+test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) + navigation", async () => {
   const html = await readHtml();
-  assert.match(html, /wizardStep:\s*1/);
+  assert.match(html, /wizardStep:\s*0/);
   assert.match(html, /function goWizardStep\(/);
+  assert.match(html, /function canAdvanceToStep1\(/);
   assert.match(html, /function canAdvanceToStep2\(/);
   assert.match(html, /function canAdvanceToStep3\(/);
   assert.match(html, /class="wizard"/);
+  assert.match(html, /data-step-n="0"/);
   assert.match(html, /data-step-n="1"/);
   assert.match(html, /data-step-n="2"/);
   assert.match(html, /data-step-n="3"/);
@@ -186,18 +188,18 @@ test("reels-studio 3-step wizard structure + navigation", async () => {
   assert.match(html, /id="wiz-next"/);
   assert.match(html, /id="wiz-skip"/);
   assert.match(html, /\.wizard-step\s*\{\s*display:\s*none;\s*\}/);
-  assert.match(html, /wizard\[data-step="1"\]/);
+  assert.match(html, /wizard\[data-step="0"\]/);
   assert.match(html, /\.wizard-dot\.active\s*\{\s*background:\s*var\(--accent\);\s*\}/);
   assert.match(html, /if \(r\.wizardStep === undefined\)/);
-  assert.match(html, /copy\.wizardStep = 1/);
+  assert.match(html, /copy\.wizardStep = 0/);
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-generate-content"/);
 });
 
-test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
+test("reels-studio regenerate wrappers + dynamic labels + SW v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -210,4 +212,80 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
   assert.match(html, /saveReels\(state\);\s*renderPlan\(\);/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\)/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\)/);
+});
+
+test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
+  const html = await readHtml();
+  assert.match(html, /audience:\s*""/);
+  assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
+  assert.match(html, /hookCandidates:\s*\[\]/);
+  assert.match(html, /function generateAiHooks\(/);
+  assert.match(html, /function regenerateHooks\(/);
+  assert.match(html, /function renderHookCandidates\(/);
+  assert.match(html, /重新生成會拎走現有 Hook 候選/);
+  assert.match(html, /r\.hookCandidates\.length \? "重新生成 Hook" : "AI 生成 Hook"/);
+  assert.match(html, /addEventListener\("click", regenerateHooks\)/);
+  assert.match(html, /id="ai-generate-hooks"/);
+  assert.match(html, /id="hook-candidates"/);
+  assert.match(html, /id="p-audience"/);
+  assert.match(html, /id="p-tone"/);
+  assert.match(html, /fitGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /risk:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /受眾："\s*\+\s*r\.audience/);
+  assert.match(html, /語氣："\s*\+\s*r\.tone/);
+  assert.match(html, /留人理由/);
+  assert.match(html, /風險/);
+  assert.match(html, /適合/);
+  assert.match(html, /copy\.hookCandidates = \[\]/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+});
+
+test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time structure + interactionGoal", async () => {
+  const html = await readHtml();
+  assert.match(html, /教學型/);
+  assert.match(html, /故事型/);
+  assert.match(html, /受眾："\s*\+\s*r\.audience/);
+  assert.match(html, /0[–-]2\s*秒/);
+  assert.match(html, /中段/);
+  assert.match(html, /互動目標/);
+  assert.match(html, /留言/);
+  assert.match(html, /save/);
+  assert.match(html, /share/);
+  assert.match(html, /interactionGoal:\s*""/);
+  assert.match(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
+  assert.doesNotMatch(html, /先揀齊四組選項（結構\+角度、片長\+字幕風格、CTA 呈現、B-roll），再生成完整內容。/);
+  assert.match(html, /目前由 AI 自動判斷，之後可手動調整/);
+});
+
+test("reels-studio Stage C script review + polish", async () => {
+  const html = await readHtml();
+  assert.match(html, /scriptReview:\s*null/);
+  assert.match(html, /scriptReviewAt:\s*null/);
+  assert.match(html, /function reviewScript\(/);
+  assert.match(html, /function regenerateReview\(/);
+  assert.match(html, /function renderScriptReview\(/);
+  assert.match(html, /function applyPolishedScript\(/);
+  assert.match(html, /function applyPolishedCaption\(/);
+  assert.match(html, /重新檢查會拎走現有質檢結果/);
+  assert.match(html, /r\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"/);
+  assert.match(html, /addEventListener\("click", regenerateReview\)/);
+  assert.match(html, /id="ai-review-script"/);
+  assert.match(html, /id="script-review"/);
+  assert.match(html, /id="use-polished-script"/);
+  assert.match(html, /id="use-polished-caption"/);
+  assert.match(html, /時間密度/);
+  assert.match(html, /VO 長度/);
+  assert.match(html, /字幕密度/);
+  assert.match(html, /中段留人/);
+  assert.match(html, /CTA 對應/);
+  assert.match(html, /可拍性/);
+  assert.match(html, /重複度/);
+  assert.match(html, /語氣：太似 AI/);
+  assert.match(html, /r\.interactionGoal \|\| "（未定）"/);
+  assert.match(html, /AI 建議優化/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\)/);
+  assert.match(html, /用修正版覆寫現有腳本/);
+  assert.match(html, /用修正版覆寫現有 caption/);
+  assert.match(html, /copy\.scriptReview = null/);
 });

@@ -69,6 +69,7 @@
     .script-tools { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
     .script-tools button { padding: 6px 12px; }
     .wizard-step { display: none; }
+    .wizard[data-step="0"] .wizard-step[data-step-n="0"],
     .wizard[data-step="1"] .wizard-step[data-step-n="1"],
     .wizard[data-step="2"] .wizard-step[data-step-n="2"],
     .wizard[data-step="3"] .wizard-step[data-step-n="3"] { display: block; }
@@ -76,6 +77,25 @@
     .wizard-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--line); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
     .wizard-dot.active { background: var(--accent); }
     .wizard-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
+    .hook-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 6px 0; }
+    .hook-card.selected { border-color: var(--accent); background: rgba(201,107,138,0.08); }
+    .hook-card .hook-type { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+    .hook-card .hook-text { margin-bottom: 6px; }
+    .hook-card .hook-meta { font-size: 12px; color: var(--muted); margin: 2px 0; }
+    .hook-card .use-hook { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
+    .interaction-goal { padding: 8px; border: 1px dashed var(--line); border-radius: 8px; background: #fff8fb; }
+    .goal-hint { font-size: 12px; color: var(--muted); }
+    .review-issue { border-left: 3px solid var(--line); padding: 6px 10px; margin: 6px 0; }
+    .review-issue.sev-高 { border-color: #d44; }
+    .review-issue.sev-中 { border-color: #e80; }
+    .review-issue.sev-低 { border-color: var(--line); }
+    .review-issue .area { font-weight: bold; }
+    .review-issue .sev { font-size: 11px; float: right; color: var(--muted); }
+    .review-issue .problem { font-size: 13px; margin-top: 2px; }
+    .polished-block { margin-top: 10px; }
+    .polished-block label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .polished-block textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; box-sizing: border-box; }
+    .polished-block button { margin-top: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -128,7 +148,7 @@
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
-    const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"];
+    const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型"];
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
       hook: "頭 2 秒留人", retention: "整體留存", rhythm: "節奏密度",
@@ -180,6 +200,13 @@
         title: "",
         structure: "反差型",
         hook: "",
+        audience: "",
+        tone: "香港廣東話、自然、簡短",
+        hookCandidates: [],
+        hookCandidatesAt: null,
+        interactionGoal: "",
+        scriptReview: null,
+        scriptReviewAt: null,
         coreMessage: "",
         segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
@@ -195,7 +222,7 @@
         aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
         scriptText: "",
-        wizardStep: 1
+        wizardStep: 0
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -222,13 +249,19 @@
           note: s.note || ""
         }));
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
+        if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
+        if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
+        if (merged.scriptReview !== null && typeof merged.scriptReview !== "object") merged.scriptReview = null;
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
           merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
         }
         if (r.wizardStep === undefined) {
           if (merged.aiGeneratedAt) merged.wizardStep = 3;
           else if (merged.aiOptions) merged.wizardStep = 2;
-          else merged.wizardStep = 1;
+          else if (merged.hook && merged.hook.trim()) merged.wizardStep = 1;
+          else merged.wizardStep = 0;
+        } else if (merged.wizardStep === 1 && !(merged.hook && merged.hook.trim())) {
+          merged.wizardStep = 0;
         }
         return merged;
       });
@@ -359,6 +392,97 @@
       broll: "brollSets"
     };
 
+    const HOOK_SCHEMA = {
+      type: "object",
+      properties: {
+        hooks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              text: { type: "string" },
+              reason: { type: "string" },
+              risk: { type: "string" },
+              fitGoal: { type: "string" }
+            },
+            required: ["type", "text", "reason", "risk", "fitGoal"]
+          }
+        }
+      },
+      required: ["hooks"]
+    };
+
+    function hookPrompt(r) {
+      return [
+        "你是香港美容業 IG Reels hook 策劃。根據以下輸入，出 5 個唔同類型嘅 hook 候選，每個附留人理由、風險、適合互動目標。繁體中文、廣東話自然語氣。",
+        "輸入：",
+        "主題：" + r.title,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
+        "",
+        "出 5 個 hook，類型分別係：痛點、反差、結果、好奇、身份認同（各 1 個）。",
+        "輸出 JSON：hooks 陣列，每項含 type（痛點/反差/結果/好奇/身份認同）、text（hook 文字）、reason（留人理由）、risk（風險：會唔會太標題黨/太闊/太似廣告）、fitGoal（適合互動目標：留言/save/share 三揀一）。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiHooks() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.title.trim()) { alert("請先填主題。"); return; }
+      const btn = document.getElementById("ai-generate-hooks");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(hookPrompt(r), HOOK_SCHEMA);
+        r.hookCandidates = Array.isArray(data.hooks) ? data.hooks : [];
+        r.hookCandidatesAt = new Date().toISOString();
+        r.updatedAt = r.hookCandidatesAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.hookCandidates?.length ? "重新生成 Hook" : "AI 生成 Hook"); }
+      }
+    }
+
+    function regenerateHooks() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.hookCandidates && r.hookCandidates.length && !confirm("重新生成會拎走現有 Hook 候選，繼續？")) return;
+      generateAiHooks();
+    }
+
+    function renderHookCandidates() {
+      const box = document.getElementById("hook-candidates");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !Array.isArray(r.hookCandidates) || !r.hookCandidates.length) { box.innerHTML = ""; return; }
+      box.innerHTML = r.hookCandidates.map((h, i) => {
+        const sel = r.hook && r.hook === h.text;
+        return `<div class="hook-card${sel ? " selected" : ""}" data-i="${i}">
+          <div class="hook-type">${escapeHtml(h.type || "")}</div>
+          <div class="hook-text">${escapeHtml(h.text || "")}</div>
+          <div class="hook-meta">留人理由：${escapeHtml(h.reason || "")}</div>
+          <div class="hook-meta">風險：${escapeHtml(h.risk || "")}</div>
+          <div class="hook-meta">適合：${escapeHtml(h.fitGoal || "")}</div>
+          <button type="button" class="use-hook">用呢個</button>
+        </div>`;
+      }).join("");
+      box.querySelectorAll(".use-hook").forEach((b) => {
+        b.addEventListener("click", () => {
+          const r2 = activeReel(); if (!r2) return;
+          const card = b.closest(".hook-card");
+          const i = Number(card.dataset.i);
+          if (!r2.hookCandidates || !r2.hookCandidates[i]) return;
+          r2.hook = r2.hookCandidates[i].text;
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderPlan();
+        });
+      });
+    }
+
     const STAGE_A_SCHEMA = {
       type: "object",
       properties: {
@@ -378,8 +502,10 @@
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
         "CTA：" + r.cta,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
         "",
-        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
+        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型/教學型/故事型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
       ].join("\n");
     }
 
@@ -452,14 +578,15 @@
         summary: { type: "string" },
         caption: { type: "string" },
         hashtags: { type: "array", items: { type: "string" } },
-        coverText: { type: "string" }
+        coverText: { type: "string" },
+        interactionGoal: { type: "string" }
       },
       required: ["segments", "summary", "caption", "hashtags", "coverText"]
     };
 
     function stageBPrompt(r) {
       const p = r.aiPicks || {};
-      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀）");
+      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀，由你按主題判斷）");
       return [
         "你是香港美容業 IG Reels 編導。根據以下輸入同已揀嘅創作選項，輸出完整可拍內容。繁體中文。",
         "輸入：",
@@ -467,12 +594,18 @@
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
         "CTA：" + r.cta,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
         "已揀結構+角度：" + fmt(p.structureAngle),
         "已揀片長+字幕風格：" + fmt(p.lengthStyle),
         "已揀 CTA 呈現：" + fmt(p.ctaStyle),
         "已揀 B-roll：" + fmt(p.broll),
         "",
-        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IG post caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字。",
+        "時間結構（必須跟）：0–2 秒 Hook（用上面鉤子）/ 2–4 秒承諾「點解要睇落去」/ 4–15 秒連續小答案每 3–5 秒一個 payoff / 15–25 秒加深反轉補最易錯位 / 最後 3–5 秒總結 + CTA。",
+        "7 留人法（必須跟）：hook 後承諾、每 3 秒變化、唔早講晒答案、問題→答案→再問題、中段第二 hook、結尾互動、唔講廢話。",
+        "單一互動目標：呢條片揀一個主要互動目標——留言 / save / share 三揀一，並圍繞住佢設計 CTA。唔好同時叫人留言 + save + share。請把揀咗嘅目標寫入 interactionGoal 欄位。",
+        "",
+        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IGpost caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字、interactionGoal（留言/save/share 三揀一）。",
         "要求：節奏密、鏡頭 0.5–2 秒、字幕短句分行、9:16 直拍主體放中間、旁白口語化。嚴格跟 JSON schema。"
       ].join("\n");
     }
@@ -480,11 +613,6 @@
     async function generateAiContent() {
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      const p = r.aiPicks || {};
-      if (!p.structureAngle || !p.lengthStyle || !p.ctaStyle || !p.broll) {
-        alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll），再生成完整內容。");
-        return;
-      }
       const btn = document.getElementById("ai-generate-content");
       if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
       try {
@@ -502,6 +630,10 @@
         r.caption = data.caption || "";
         r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
         r.coverText = data.coverText || "";
+        r.interactionGoal = data.interactionGoal || "";
+        r.scriptReview = null;
+        r.scriptReviewAt = null;
+        const p = r.aiPicks || {};
         if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
         r.aiGeneratedAt = new Date().toISOString();
         r.updatedAt = r.aiGeneratedAt;
@@ -529,6 +661,141 @@
       if (!r) return;
       if (r.aiGeneratedAt && !confirm("重新生成會覆寫現有逐鏡/caption/hashtag/封面，繼續？")) return;
       generateAiContent();
+    }
+
+    const REVIEW_SCHEMA = {
+      type: "object",
+      properties: {
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              area: { type: "string" },
+              problem: { type: "string" },
+              severity: { type: "string" }
+            },
+            required: ["area", "problem", "severity"]
+          }
+        },
+        polishedScript: { type: "string" },
+        polishedCaption: { type: "string" }
+      },
+      required: ["issues", "polishedScript", "polishedCaption"]
+    };
+
+    function reviewPrompt(r) {
+      const segs = (Array.isArray(r.segments) ? r.segments : [])
+        .map((s, i) => `Step ${i + 1}：${s.label || ""} — 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}（${s.durationSec || 0}秒）`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Reels 質檢編輯。請檢查以下腳本，逐項指出可改善位置，並提供修正版。繁體中文。",
+        "主題：" + r.title,
+        "受眾：" + r.audience,
+        "語氣：" + r.tone,
+        "AI 揀嘅互動目標：" + (r.interactionGoal || "（未定）"),
+        "",
+        "現有逐鏡：",
+        segs || "（空）",
+        "",
+        "現有腳本：",
+        r.scriptText || "（空）",
+        "",
+        "現有 caption：",
+        r.caption || "（空）",
+        "",
+        "請按以下 8 項 QC 清單逐項檢查，有問題就加入 issues（冇問題就唔加）：",
+        "1. 時間密度：30 秒入面講太多嘢？",
+        "2. VO 長度：一秒塞太多字，旁白太長氣？",
+        "3. 字幕密度：畫面字太多，觀眾睇唔切？",
+        "4. 中段留人：8–12 秒開始悶，冇第二個 hook？",
+        "5. CTA 對應：CTA 同互動目標（" + (r.interactionGoal || "未定") + "）唔對應？",
+        "6. 語氣：太似 AI / 太書面 / 太廣告？",
+        "7. 可拍性：分鏡講得靚但現實拍唔到？",
+        "8. 重複度：成日「你以為 A，其實 B」之類公式化？",
+        "",
+        "輸出 JSON：issues 陣列（每項 area 用上述檢查位名稱、problem 具體描述、severity 為 高/中/低）、polishedScript 修正版腳本、polishedCaption 修正版 caption。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function reviewScript() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.scriptText || !r.scriptText.trim()) { alert("請先生成或填腳本。"); return; }
+      const btn = document.getElementById("ai-review-script");
+      if (btn) { btn.disabled = true; btn.textContent = "檢查中…"; }
+      try {
+        const data = await callGemini(reviewPrompt(r), REVIEW_SCHEMA);
+        r.scriptReview = {
+          issues: Array.isArray(data.issues) ? data.issues : [],
+          polishedScript: data.polishedScript || "",
+          polishedCaption: data.polishedCaption || ""
+        };
+        r.scriptReviewAt = new Date().toISOString();
+        r.updatedAt = r.scriptReviewAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.scriptReview ? "重新檢查腳本" : "AI 檢查腳本"); }
+      }
+    }
+
+    function regenerateReview() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.scriptReview && !confirm("重新檢查會拎走現有質檢結果，繼續？")) return;
+      reviewScript();
+    }
+
+    function renderScriptReview() {
+      const box = document.getElementById("script-review");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.scriptReview) { box.innerHTML = ""; return; }
+      const rev = r.scriptReview;
+      const issues = (Array.isArray(rev.issues) ? rev.issues : []).map((it) => {
+        const sev = it.severity || "低";
+        return `<div class="review-issue sev-${escapeHtml(sev)}"><span class="area">${escapeHtml(it.area || "")}</span><span class="sev">${escapeHtml(sev)}</span><div class="problem">${escapeHtml(it.problem || "")}</div></div>`;
+      }).join("");
+      box.innerHTML = `
+        <h4>AI 建議優化</h4>
+        <div class="review-issues">${issues || "<p style='color:var(--muted);font-size:13px'>未有明顯問題。</p>"}</div>
+        <div class="polished-block">
+          <label>修正版腳本參考</label>
+          <textarea id="polished-script" rows="8">${escapeHtml(rev.polishedScript || "")}</textarea>
+          <button type="button" id="use-polished-script">用修正版腳本</button>
+        </div>
+        <div class="polished-block">
+          <label>修正版 caption 參考</label>
+          <textarea id="polished-caption" rows="6">${escapeHtml(rev.polishedCaption || "")}</textarea>
+          <button type="button" id="use-polished-caption">用修正版 caption</button>
+        </div>`;
+      const ups = box.querySelector("#use-polished-script");
+      if (ups) ups.addEventListener("click", applyPolishedScript);
+      const upc = box.querySelector("#use-polished-caption");
+      if (upc) upc.addEventListener("click", applyPolishedCaption);
+    }
+
+    function applyPolishedScript() {
+      const r = activeReel();
+      if (!r || !r.scriptReview) return;
+      if (!confirm("用修正版覆寫現有腳本？")) return;
+      r.scriptText = r.scriptReview.polishedScript || "";
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
+    function applyPolishedCaption() {
+      const r = activeReel();
+      if (!r || !r.scriptReview) return;
+      if (!confirm("用修正版覆寫現有 caption？")) return;
+      r.caption = r.scriptReview.polishedCaption || "";
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
     }
 
     function assembleCaption() {
@@ -603,8 +870,12 @@
       }
     }
 
+    function canAdvanceToStep1(r) {
+      return !!(r.title.trim() && r.hook.trim());
+    }
+
     function canAdvanceToStep2(r) {
-      return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
+      return !!(r.coreMessage.trim() && r.cta.trim());
     }
 
     function canAdvanceToStep3(r) {
@@ -615,7 +886,7 @@
     function goWizardStep(n) {
       const r = activeReel();
       if (!r) return;
-      n = Math.max(1, Math.min(3, n));
+      n = Math.max(0, Math.min(3, n));
       r.wizardStep = n;
       r.updatedAt = new Date().toISOString();
       saveReels(state);
@@ -643,17 +914,27 @@
             </div>`
         )
         .join("");
-      const step = r.wizardStep || 1;
-      const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n}</span>`;
+      const step = r.wizardStep ?? 0;
+      const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n + 1}</span>`;
       panel.innerHTML = `
         <div class="wizard" data-step="${step}">
-          <div class="wizard-dots">${dot(1)}${dot(2)}${dot(3)}</div>
-          <div class="wizard-step" data-step-n="1">
+          <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}</div>
+          <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
+            <div class="field"><label>目標受眾</label><input id="p-audience" value="${escapeHtml(r.audience)}"></div>
+            <div class="field"><label>語氣</label><input id="p-tone" value="${escapeHtml(r.tone)}"></div>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-generate-hooks">${r.hookCandidates && r.hookCandidates.length ? "重新生成 Hook" : "AI 生成 Hook"}</button>
+              </div>
+              <div id="hook-candidates"></div>
+            </div>
+            <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
+          </div>
+          <div class="wizard-step" data-step-n="1">
             <div class="field"><label>結構</label>
               <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
             </div>
-            <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
             <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
             <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
           </div>
@@ -666,6 +947,7 @@
             </div>
           </div>
           <div class="wizard-step" data-step-n="3">
+            ${r.interactionGoal ? `<div class="field"><label>AI 揀嘅互動目標</label><div class="interaction-goal">${escapeHtml(r.interactionGoal)} <span class="goal-hint">（目前由 AI 自動判斷，之後可手動調整）</span></div></div>` : ""}
             <div class="field"><label>逐鏡頭 shot list</label>
               <div id="seg-list">${segs}</div>
               <button type="button" id="seg-add">+ 加鏡頭</button>
@@ -693,6 +975,12 @@
                 <button type="button" class="primary" id="ai-generate-content">${r.aiGeneratedAt ? "重新生成內容" : "生成完整內容"}</button>
               </div>
             </div>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-review-script">${r.scriptReview ? "重新檢查腳本" : "AI 檢查腳本"}</button>
+              </div>
+              <div id="script-review"></div>
+            </div>
           </div>
           <div class="wizard-nav">
             <button type="button" id="wiz-prev">← 上一步</button>
@@ -712,6 +1000,8 @@
         });
       };
       bind("#p-title", "title");
+      bind("#p-audience", "audience");
+      bind("#p-tone", "tone");
       bind("#p-structure", "structure");
       bind("#p-hook", "hook");
       bind("#p-core", "coreMessage");
@@ -749,19 +1039,20 @@
         saveReels(state);
         renderPlan();
       });
-      const stepCur = r.wizardStep || 1;
+      const stepCur = r.wizardStep ?? 0;
       const prevBtn = panel.querySelector("#wiz-prev");
       const nextBtn = panel.querySelector("#wiz-next");
       const skipBtn = panel.querySelector("#wiz-skip");
-      if (prevBtn) prevBtn.style.display = stepCur === 1 ? "none" : "inline-block";
+      if (prevBtn) prevBtn.style.display = stepCur === 0 ? "none" : "inline-block";
       if (nextBtn) nextBtn.style.display = stepCur === 3 ? "none" : "inline-block";
       if (skipBtn) skipBtn.style.display = stepCur === 2 ? "inline-block" : "none";
-      if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep || 1) - 1));
+      if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep ?? 0) - 1));
       if (skipBtn) skipBtn.addEventListener("click", () => goWizardStep(3));
       if (nextBtn) nextBtn.addEventListener("click", () => {
         const r2 = activeReel(); if (!r2) return;
-        const cur = r2.wizardStep || 1;
-        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+        const cur = r2.wizardStep ?? 0;
+        if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
+        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填重點同 CTA。"); return; }
         if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll）。"); return; }
         goWizardStep(cur + 1);
       });
@@ -769,16 +1060,21 @@
         d.addEventListener("click", () => {
           const r2 = activeReel(); if (!r2) return;
           const target = Number(d.dataset.go);
-          if (target === (r2.wizardStep || 1)) return;
-          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+          if (target === (r2.wizardStep ?? 0)) return;
+          if (target >= 1 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
+          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("請先填重點同 CTA。"); return; }
           if (target === 3 && !canAdvanceToStep3(r2) && !r2.aiGeneratedAt) { alert("先揀齊四組選項，或撳「略過 AI」直接手動編輯。"); return; }
           goWizardStep(target);
         });
       });
+      const genHooksBtn = panel.querySelector("#ai-generate-hooks");
+      if (genHooksBtn) genHooksBtn.addEventListener("click", regenerateHooks);
       const genOptsBtn = panel.querySelector("#ai-generate-options");
       if (genOptsBtn) genOptsBtn.addEventListener("click", regenerateOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
       if (genContentBtn) genContentBtn.addEventListener("click", regenerateContent);
+      const reviewBtn = panel.querySelector("#ai-review-script");
+      if (reviewBtn) reviewBtn.addEventListener("click", regenerateReview);
       const asmBtn = panel.querySelector("#assemble-caption");
       if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
       const cpyBtn = panel.querySelector("#copy-caption");
@@ -787,6 +1083,8 @@
       if (asmScrBtn) asmScrBtn.addEventListener("click", () => assembleScript(false));
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
+      renderHookCandidates();
+      renderScriptReview();
       renderAiOptions();
     }
 
@@ -944,7 +1242,12 @@
       copy.createdAt = new Date().toISOString();
       copy.updatedAt = copy.createdAt;
       copy.status = "planning";
-      copy.wizardStep = 1;
+      copy.wizardStep = 0;
+      copy.hookCandidates = [];
+      copy.hookCandidatesAt = null;
+      copy.interactionGoal = "";
+      copy.scriptReview = null;
+      copy.scriptReviewAt = null;
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);
