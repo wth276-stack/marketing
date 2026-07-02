@@ -115,3 +115,12 @@ test("reels-studio declares Gemini config + client", async () => {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
 });
+
+test("reels-studio declares AI option generation + pick UI", async () => {
+  const html = await readHtml();
+  for (const name of ["generateAiOptions", "renderAiOptions"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+  assert.match(html, /id="ai-generate-options"/);
+  assert.match(html, /id="ai-picks"/);
+});

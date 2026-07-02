@@ -175,7 +175,10 @@
         checklist: {},
         score: {},
         scoreNotes: "",
-        publishedAt: null
+        publishedAt: null,
+        aiOptions: null,
+        aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
+        aiGeneratedAt: null
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -194,6 +197,9 @@
           merged.segments = [{ label: "", shot: "", durationSec: 0, note: "" }];
         }
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
+        if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
+          merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+        }
         return merged;
       });
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
@@ -316,6 +322,98 @@
       alert("發生未知錯誤。");
     }
 
+    const AI_GROUP_ARRAY = {
+      structureAngle: "structureAngles",
+      lengthStyle: "lengthStyles",
+      ctaStyle: "ctaStyles",
+      broll: "brollSets"
+    };
+
+    const STAGE_A_SCHEMA = {
+      type: "object",
+      properties: {
+        structureAngles: { type: "array", items: { type: "object", properties: { structure: { type: "string" }, angle: { type: "string" }, reason: { type: "string" } }, required: ["structure", "angle", "reason"] } },
+        lengthStyles: { type: "array", items: { type: "object", properties: { lengthSec: { type: "integer" }, subtitleStyle: { type: "string" }, reason: { type: "string" } }, required: ["lengthSec", "subtitleStyle", "reason"] } },
+        ctaStyles: { type: "array", items: { type: "object", properties: { style: { type: "string" }, exampleRead: { type: "string" }, reason: { type: "string" } }, required: ["style", "exampleRead", "reason"] } },
+        brollSets: { type: "array", items: { type: "object", properties: { shots: { type: "array", items: { type: "string" } }, reason: { type: "string" } }, required: ["shots", "reason"] } }
+      },
+      required: ["structureAngles", "lengthStyles", "ctaStyles", "brollSets"]
+    };
+
+    function stageAPrompt(r) {
+      return [
+        "你是香港美容業 IG Reels 編導。根據以下輸入，為每個創作維度各出 2 至 3 個候選選項，每項附一句簡短 reason。繁體中文。",
+        "輸入：",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "CTA：" + r.cta,
+        "",
+        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiOptions() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.title.trim() || !r.hook.trim() || !r.coreMessage.trim() || !r.cta.trim()) {
+        alert("請先填齊主題、鉤子、重點、CTA 四格，再生成選項。");
+        return;
+      }
+      const btn = document.getElementById("ai-generate-options");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA);
+        r.aiOptions = data;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderAiOptions();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "AI 生成選項"; }
+      }
+    }
+
+    function renderAiOptions() {
+      const box = document.getElementById("ai-picks");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.aiOptions) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">填好上面四格，撳「AI 生成選項」由 AI 出創作選項俾你揀。</p>';
+        return;
+      }
+      const o = r.aiOptions;
+      const picks = r.aiPicks || {};
+      const group = (title, items, key, card) =>
+        `<div class="ai-pick-group"><h4>${title}</h4>` +
+        (Array.isArray(items) ? items : []).map((item, i) => {
+          const sel = JSON.stringify(picks[key]) === JSON.stringify(item);
+          return `<div class="ai-pick-card${sel ? " selected" : ""}" data-group="${key}" data-i="${i}">${card(item)}</div>`;
+        }).join("") + `</div>`;
+      const html =
+        group("結構 + 內容角度", o.structureAngles, "structureAngle", (x) => `<strong>${escapeHtml(x.structure)} · ${escapeHtml(x.angle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("片長 + 字幕風格", o.lengthStyles, "lengthStyle", (x) => `<strong>${x.lengthSec}秒 · ${escapeHtml(x.subtitleStyle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("CTA 呈現方式", o.ctaStyles, "ctaStyle", (x) => `<strong>${escapeHtml(x.style)}</strong> — 「${escapeHtml(x.exampleRead)}」<div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("B-roll 拍攝元素", o.brollSets, "broll", (x) => `<strong>${(x.shots || []).map(escapeHtml).join("、")}</strong><div class="reason">${escapeHtml(x.reason)}</div>`);
+      box.innerHTML = html;
+      box.querySelectorAll(".ai-pick-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const r2 = activeReel();
+          if (!r2 || !r2.aiOptions) return;
+          const g = card.dataset.group;
+          const i = Number(card.dataset.i);
+          const arr = r2.aiOptions[AI_GROUP_ARRAY[g]];
+          if (!arr || !arr[i]) return;
+          r2.aiPicks = r2.aiPicks || { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+          r2.aiPicks[g] = arr[i];
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderAiOptions();
+        });
+      });
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -335,7 +433,14 @@
             </div>`
         )
         .join("");
-      panel.innerHTML = `
+      const aiBlock = `
+        <div class="ai-block">
+          <div class="toolbar">
+            <button type="button" id="ai-generate-options">AI 生成選項</button>
+          </div>
+          <div id="ai-picks"></div>
+        </div>`;
+      panel.innerHTML = aiBlock + `
         <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
         <div class="field"><label>結構</label>
           <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
@@ -398,6 +503,9 @@
         saveReels(state);
         renderPlan();
       });
+      const genOptsBtn = panel.querySelector("#ai-generate-options");
+      if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
+      renderAiOptions();
     }
 
     function renderShootChecklist() {
