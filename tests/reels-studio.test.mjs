@@ -101,3 +101,17 @@ test("reels-studio declares export/import functions", async () => {
     assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
   }
 });
+
+test("reels-studio declares Gemini config + client", async () => {
+  const html = await readHtml();
+  for (const name of ["loadAiConfig", "saveAiConfig", "callGemini"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+  assert.match(html, /generativelanguage\.googleapis\.com/);
+  assert.match(html, /responseMimeType/);
+  assert.match(html, /application\/json/);
+  assert.match(html, /jessi-reels-gemini-config/);
+  for (const id of ["ai-settings", "ai-api-key", "ai-model", "ai-save-config"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+});

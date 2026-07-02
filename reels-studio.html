@@ -49,6 +49,18 @@
       .app-shell { grid-template-columns: 1fr; }
       #reel-list { border-right: 0; border-bottom: 1px solid var(--line); }
     }
+    #ai-settings { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    #ai-settings > summary { padding: 8px 12px; cursor: pointer; font-weight: 700; list-style: none; }
+    #ai-settings > summary::before { content: "⚙️ "; }
+    .ai-settings-body { padding: 8px 12px 12px; border-top: 1px solid var(--line); }
+    .ai-note { font-size: 12px; color: #7a5b00; background: #fff3cd; padding: 6px 8px; border-radius: 6px; margin: 6px 0; }
+    .ai-block { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; background: #fff8fb; }
+    .ai-pick-group { margin: 10px 0; }
+    .ai-pick-group h4 { margin: 6px 0; font-size: 14px; }
+    .ai-pick-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; cursor: pointer; background: var(--panel); }
+    .ai-pick-card.selected { border-color: var(--rose); background: #fdeaf1; }
+    .ai-pick-card .reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ai-busy { opacity: .6; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -68,6 +80,21 @@
         <button type="button" class="primary" id="copy-ai-brief">複製 AI 拍片 brief</button>
         <button type="button" id="export-json">匯出 JSON</button>
         <label>匯入 JSON <input type="file" id="import-json" accept=".json" hidden></label>
+          <details id="ai-settings">
+            <summary>AI 設定</summary>
+            <div class="ai-settings-body">
+              <p class="ai-note">API key 只存本機瀏覽器，只會直接傳去 Google Gemini API。</p>
+              <div class="field"><label>Gemini API key</label><input type="password" id="ai-api-key" placeholder="AIza..."></div>
+              <div class="field"><label>模型</label>
+                <select id="ai-model">
+                  <option value="gemini-2.5-flash" selected>gemini-2.5-flash（快、免費額）</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                </select>
+              </div>
+              <button type="button" id="ai-save-config">儲存設定</button>
+            </div>
+          </details>
       </div>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="plan-panel">策劃</button>
@@ -83,6 +110,9 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
+    const CONFIG_KEY = "jessi-reels-gemini-config";
+    const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
+    const DEFAULT_MODEL = "gemini-2.5-flash";
     const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"];
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
@@ -232,6 +262,58 @@
     function escapeHtml(s) {
       return String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function loadAiConfig() {
+      try {
+        const c = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+        return { apiKey: c.apiKey || "", model: c.model || DEFAULT_MODEL };
+      } catch {
+        return { apiKey: "", model: DEFAULT_MODEL };
+      }
+    }
+
+    function saveAiConfig(cfg) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+    }
+
+    async function callGemini(promptText, responseSchema) {
+      const cfg = loadAiConfig();
+      if (!cfg.apiKey) throw { type: "no-key" };
+      const url = GEMINI_ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent?key=" + encodeURIComponent(cfg.apiKey);
+      const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig: { responseMimeType: "application/json" } };
+      if (responseSchema) body.generationConfig.responseSchema = responseSchema;
+      let resp;
+      try {
+        resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      } catch {
+        throw { type: "network" };
+      }
+      if (resp.status === 401 || resp.status === 403) throw { type: "auth" };
+      if (resp.status === 429) throw { type: "quota" };
+      if (!resp.ok) throw { type: "network" };
+      let data;
+      try { data = await resp.json(); } catch { throw { type: "network" }; }
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      try { return JSON.parse(raw); } catch { throw { type: "parse", raw }; }
+    }
+
+    function handleAiError(e) {
+      if (e && e.type === "no-key") {
+        const d = document.getElementById("ai-settings"); if (d) d.open = true;
+        const k = document.getElementById("ai-api-key"); if (k) k.focus();
+        alert("請先喺「AI 設定」輸入 Gemini API key。");
+        return;
+      }
+      if (e && e.type === "auth") {
+        const d = document.getElementById("ai-settings"); if (d) d.open = true;
+        alert("API key 無效，請去「AI 設定」檢查。");
+        return;
+      }
+      if (e && e.type === "quota") { alert("額度用盡或太頻繁，稍後再試。"); return; }
+      if (e && e.type === "network") { alert("連唔到 Gemini，check 網絡。"); return; }
+      if (e && e.type === "parse") { alert("Gemini 回應格式異常，請再試。"); console.warn("Gemini raw:", e.raw); return; }
+      alert("發生未知錯誤。");
     }
 
     function renderPlan() {
@@ -569,6 +651,18 @@
     document.getElementById("import-json").addEventListener("change", importJsonFile);
     document.getElementById("delete-reel").addEventListener("click", deleteReel);
     document.getElementById("duplicate-reel").addEventListener("click", duplicateReel);
+    (function initAiSettings() {
+      const cfg = loadAiConfig();
+      const keyEl = document.getElementById("ai-api-key");
+      const modelEl = document.getElementById("ai-model");
+      if (keyEl) keyEl.value = cfg.apiKey;
+      if (modelEl) modelEl.value = cfg.model;
+      const saveBtn = document.getElementById("ai-save-config");
+      if (saveBtn) saveBtn.addEventListener("click", () => {
+        saveAiConfig({ apiKey: (keyEl ? keyEl.value : "").trim(), model: modelEl ? modelEl.value : DEFAULT_MODEL });
+        alert("AI 設定已儲存。");
+      });
+    })();
   </script>
 </body>
 </html>
