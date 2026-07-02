@@ -170,3 +170,26 @@ test("reels-studio Stage B auto-assembles script + SW bumped to v14", async () =
   assert.match(sw, /jessi-workflow-cache-v14/);
   assert.match(html, /assembleScript\(true\)/);
 });
+
+test("reels-studio 3-step wizard structure + navigation", async () => {
+  const html = await readHtml();
+  assert.match(html, /wizardStep:\s*1/);
+  assert.match(html, /function goWizardStep\(/);
+  assert.match(html, /function canAdvanceToStep2\(/);
+  assert.match(html, /function canAdvanceToStep3\(/);
+  assert.match(html, /class="wizard"/);
+  assert.match(html, /data-step-n="1"/);
+  assert.match(html, /data-step-n="2"/);
+  assert.match(html, /data-step-n="3"/);
+  assert.match(html, /class="wizard-dot/);
+  assert.match(html, /id="wiz-prev"/);
+  assert.match(html, /id="wiz-next"/);
+  assert.match(html, /id="wiz-skip"/);
+  assert.match(html, /\.wizard-step\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(html, /wizard\[data-step="1"\]/);
+  assert.match(html, /\.wizard-dot\.active\s*\{\s*background:\s*var\(--accent\);\s*\}/);
+  assert.match(html, /if \(r\.wizardStep === undefined\)/);
+  assert.match(html, /copy\.wizardStep = 1/);
+  assert.match(html, /id="ai-generate-options"/);
+  assert.match(html, /id="ai-generate-content"/);
+});
