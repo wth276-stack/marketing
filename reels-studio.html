@@ -631,6 +631,8 @@
         r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
         r.coverText = data.coverText || "";
         r.interactionGoal = data.interactionGoal || "";
+        r.scriptReview = null;
+        r.scriptReviewAt = null;
         const p = r.aiPicks || {};
         if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
         r.aiGeneratedAt = new Date().toISOString();
@@ -912,7 +914,7 @@
             </div>`
         )
         .join("");
-      const step = r.wizardStep || 0;
+      const step = r.wizardStep ?? 0;
       const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n + 1}</span>`;
       panel.innerHTML = `
         <div class="wizard" data-step="${step}">

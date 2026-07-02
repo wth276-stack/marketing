@@ -281,6 +281,8 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /CTA 對應/);
   assert.match(html, /可拍性/);
   assert.match(html, /重複度/);
+  assert.match(html, /語氣：太似 AI/);
+  assert.match(html, /r\.interactionGoal \|\| "（未定）"/);
   assert.match(html, /AI 建議優化/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\)/);
   assert.match(html, /用修正版覆寫現有腳本/);
