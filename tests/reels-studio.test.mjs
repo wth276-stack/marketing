@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v15", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,20 +164,22 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v15", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
-test("reels-studio 3-step wizard structure + navigation", async () => {
+test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) + navigation", async () => {
   const html = await readHtml();
-  assert.match(html, /wizardStep:\s*1/);
+  assert.match(html, /wizardStep:\s*0/);
   assert.match(html, /function goWizardStep\(/);
+  assert.match(html, /function canAdvanceToStep1\(/);
   assert.match(html, /function canAdvanceToStep2\(/);
   assert.match(html, /function canAdvanceToStep3\(/);
   assert.match(html, /class="wizard"/);
+  assert.match(html, /data-step-n="0"/);
   assert.match(html, /data-step-n="1"/);
   assert.match(html, /data-step-n="2"/);
   assert.match(html, /data-step-n="3"/);
@@ -186,18 +188,18 @@ test("reels-studio 3-step wizard structure + navigation", async () => {
   assert.match(html, /id="wiz-next"/);
   assert.match(html, /id="wiz-skip"/);
   assert.match(html, /\.wizard-step\s*\{\s*display:\s*none;\s*\}/);
-  assert.match(html, /wizard\[data-step="1"\]/);
+  assert.match(html, /wizard\[data-step="0"\]/);
   assert.match(html, /\.wizard-dot\.active\s*\{\s*background:\s*var\(--accent\);\s*\}/);
   assert.match(html, /if \(r\.wizardStep === undefined\)/);
-  assert.match(html, /copy\.wizardStep = 1/);
+  assert.match(html, /copy\.wizardStep = 0/);
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-generate-content"/);
 });
 
-test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
+test("reels-studio regenerate wrappers + dynamic labels + SW v16", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v15/);
+  assert.match(sw, /jessi-workflow-cache-v16/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);

@@ -69,6 +69,7 @@
     .script-tools { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
     .script-tools button { padding: 6px 12px; }
     .wizard-step { display: none; }
+    .wizard[data-step="0"] .wizard-step[data-step-n="0"],
     .wizard[data-step="1"] .wizard-step[data-step-n="1"],
     .wizard[data-step="2"] .wizard-step[data-step-n="2"],
     .wizard[data-step="3"] .wizard-step[data-step-n="3"] { display: block; }
@@ -195,7 +196,7 @@
         aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
         scriptText: "",
-        wizardStep: 1
+        wizardStep: 0
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -228,7 +229,10 @@
         if (r.wizardStep === undefined) {
           if (merged.aiGeneratedAt) merged.wizardStep = 3;
           else if (merged.aiOptions) merged.wizardStep = 2;
-          else merged.wizardStep = 1;
+          else if (merged.hook && merged.hook.trim()) merged.wizardStep = 1;
+          else merged.wizardStep = 0;
+        } else if (merged.wizardStep === 1 && !(merged.hook && merged.hook.trim())) {
+          merged.wizardStep = 0;
         }
         return merged;
       });
@@ -603,8 +607,12 @@
       }
     }
 
+    function canAdvanceToStep1(r) {
+      return !!(r.title.trim() && r.hook.trim());
+    }
+
     function canAdvanceToStep2(r) {
-      return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
+      return !!(r.coreMessage.trim() && r.cta.trim());
     }
 
     function canAdvanceToStep3(r) {
@@ -615,7 +623,7 @@
     function goWizardStep(n) {
       const r = activeReel();
       if (!r) return;
-      n = Math.max(1, Math.min(3, n));
+      n = Math.max(0, Math.min(3, n));
       r.wizardStep = n;
       r.updatedAt = new Date().toISOString();
       saveReels(state);
@@ -643,17 +651,19 @@
             </div>`
         )
         .join("");
-      const step = r.wizardStep || 1;
-      const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n}</span>`;
+      const step = r.wizardStep || 0;
+      const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n + 1}</span>`;
       panel.innerHTML = `
         <div class="wizard" data-step="${step}">
-          <div class="wizard-dots">${dot(1)}${dot(2)}${dot(3)}</div>
-          <div class="wizard-step" data-step-n="1">
+          <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}</div>
+          <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
+            <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
+          </div>
+          <div class="wizard-step" data-step-n="1">
             <div class="field"><label>結構</label>
               <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
             </div>
-            <div class="field"><label>頭 1–2 秒鉤子</label><textarea id="p-hook" rows="2">${escapeHtml(r.hook)}</textarea></div>
             <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
             <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
           </div>
@@ -749,19 +759,20 @@
         saveReels(state);
         renderPlan();
       });
-      const stepCur = r.wizardStep || 1;
+      const stepCur = r.wizardStep ?? 0;
       const prevBtn = panel.querySelector("#wiz-prev");
       const nextBtn = panel.querySelector("#wiz-next");
       const skipBtn = panel.querySelector("#wiz-skip");
-      if (prevBtn) prevBtn.style.display = stepCur === 1 ? "none" : "inline-block";
+      if (prevBtn) prevBtn.style.display = stepCur === 0 ? "none" : "inline-block";
       if (nextBtn) nextBtn.style.display = stepCur === 3 ? "none" : "inline-block";
       if (skipBtn) skipBtn.style.display = stepCur === 2 ? "inline-block" : "none";
-      if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep || 1) - 1));
+      if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep ?? 0) - 1));
       if (skipBtn) skipBtn.addEventListener("click", () => goWizardStep(3));
       if (nextBtn) nextBtn.addEventListener("click", () => {
         const r2 = activeReel(); if (!r2) return;
-        const cur = r2.wizardStep || 1;
-        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+        const cur = r2.wizardStep ?? 0;
+        if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
+        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("請先填重點同 CTA。"); return; }
         if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll）。"); return; }
         goWizardStep(cur + 1);
       });
@@ -769,8 +780,9 @@
         d.addEventListener("click", () => {
           const r2 = activeReel(); if (!r2) return;
           const target = Number(d.dataset.go);
-          if (target === (r2.wizardStep || 1)) return;
-          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("請先填齊主題、鉤子、重點、CTA 四格。"); return; }
+          if (target === (r2.wizardStep ?? 0)) return;
+          if (target >= 1 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
+          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("請先填重點同 CTA。"); return; }
           if (target === 3 && !canAdvanceToStep3(r2) && !r2.aiGeneratedAt) { alert("先揀齊四組選項，或撳「略過 AI」直接手動編輯。"); return; }
           goWizardStep(target);
         });
@@ -944,7 +956,7 @@
       copy.createdAt = new Date().toISOString();
       copy.updatedAt = copy.createdAt;
       copy.status = "planning";
-      copy.wizardStep = 1;
+      copy.wizardStep = 0;
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);
