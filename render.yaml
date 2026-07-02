@@ -4,7 +4,7 @@ services:
   - type: web
     name: jessi-beauty-workflow
     runtime: static
-    buildCommand: node --test tests/jessi-beauty-workflow.test.mjs && node --test tests/beauty-salon-tracker.test.mjs
+    buildCommand: node --test tests/jessi-beauty-workflow.test.mjs tests/beauty-salon-tracker.test.mjs tests/reels-studio.test.mjs
     staticPublishPath: .
     headers:
       - path: /jessi-workflow-sw.js
