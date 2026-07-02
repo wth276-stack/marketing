@@ -283,10 +283,21 @@ test("reels-studio STRUCTURES 8 types + Stage A/B audience/tone + Stage B time s
   assert.match(html, /save/);
   assert.match(html, /share/);
   assert.match(html, /interactionGoal:\s*""/);
-  assert.match(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
-  assert.match(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
+  assert.doesNotMatch(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.doesNotMatch(html, /r\.interactionGoal = data\.interactionGoal \|\| ""/);
   assert.doesNotMatch(html, /先揀齊四組選項（結構\+角度、片長\+字幕風格、CTA 呈現、B-roll），再生成完整內容。/);
-  assert.match(html, /目前由 AI 自動判斷，之後可手動調整/);
+  assert.match(html, /你揀嘅互動目標/);
+  assert.match(html, /可喺 Step 0 CTA picker 改/);
+});
+
+test("reels-studio Stage B uses user interactionGoal + Stage C split to Step 3", async () => {
+  const html = await readHtml();
+  assert.match(html, /你揀嘅互動目標/);
+  assert.match(html, /圍繞住佢設計 CTA/);
+  assert.match(html, /可喺 Step 0 CTA picker 改/);
+  assert.doesNotMatch(html, /AI 揀嘅互動目標/);
+  assert.doesNotMatch(html, /r\.interactionGoal = data\.interactionGoal/);
+  assert.doesNotMatch(html, /interactionGoal:\s*\{\s*type:\s*"string"\s*\}/);
 });
 
 test("reels-studio Stage C script review + polish", async () => {
