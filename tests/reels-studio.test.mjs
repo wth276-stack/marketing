@@ -133,3 +133,21 @@ test("reels-studio declares Stage B content generation + segment voiceover/subti
   assert.match(html, /seg-voice/);
   assert.match(html, /seg-sub/);
 });
+
+test("reels-studio declares full-caption assemble + copy", async () => {
+  const html = await readHtml();
+  for (const name of ["assembleCaption", "copyCaption"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+  assert.match(html, /id="assemble-caption"/);
+  assert.match(html, /id="copy-caption"/);
+  assert.match(html, /<textarea[^>]*id="p-caption"/);
+  assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
+});
+
+test("reels-studio Stage B asks full caption + SW bumped to v13", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v13/);
+  assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
+});
