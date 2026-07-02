@@ -151,3 +151,15 @@ test("reels-studio Stage B asks full caption + SW bumped to v13", async () => {
   assert.match(sw, /jessi-workflow-cache-v13/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
+
+test("reels-studio declares full-script assemble + copy + scriptText", async () => {
+  const html = await readHtml();
+  for (const name of ["assembleScript", "copyScript"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+  assert.match(html, /id="assemble-script"/);
+  assert.match(html, /id="copy-script"/);
+  assert.match(html, /<textarea[^>]*id="p-script"[^>]*>\$\{escapeHtml\(r\.scriptText\)\}<\/textarea>/);
+  assert.match(html, /scriptText:\s*""/);
+  assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
+});

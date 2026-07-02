@@ -64,6 +64,8 @@
     #p-caption { width: 100%; min-height: 120px; font: inherit; resize: vertical; box-sizing: border-box; }
     .caption-tools { display: flex; gap: 8px; margin: 6px 0; }
     .caption-tools button { padding: 6px 12px; }
+    #p-script { width: 100%; min-height: 240px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .script-tools { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -181,7 +183,8 @@
         publishedAt: null,
         aiOptions: null,
         aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
-        aiGeneratedAt: null
+        aiGeneratedAt: null,
+        scriptText: ""
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -527,6 +530,48 @@
       }
     }
 
+    function assembleScript(force = false) {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!force && r.scriptText && r.scriptText.trim() && !confirm("現有腳本會被覆寫，繼續？")) return;
+      const segs = (Array.isArray(r.segments) ? r.segments : []).map((s, i) =>
+        `Step ${i + 1}：${s.label || "（段落）"}\n  畫面：${s.shot || ""}\n  旁白：${s.voiceover || ""}\n  字幕：${s.subtitle || ""}\n  時長：${Number(s.durationSec) || 0}秒`
+      ).join("\n\n");
+      const lines = [
+        `【Reels 腳本 — ${r.title || "（待填）"}】`,
+        "",
+        "拍攝清單（逐鏡）：",
+        segs || "（待填）",
+        "",
+        "總結：" + (r.summary || "（待填）"),
+        "CTA：" + (r.cta || "（待填）"),
+        "",
+        "完整 caption：",
+        r.caption || "（待填）",
+        "",
+        "hashtag：" + (Array.isArray(r.hashtags) && r.hashtags.length ? r.hashtags.join(" ") : "（待填）"),
+        "封面大字：" + (r.coverText || "（待填）")
+      ];
+      r.scriptText = lines.join("\n");
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyScript() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.scriptText || !r.scriptText.trim()) { alert("腳本係空，無嘢可複製。"); return; }
+      const btn = document.getElementById("copy-script");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(r.scriptText).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -576,6 +621,14 @@
             <button type="button" id="copy-caption">複製</button>
           </div>
         </div>
+        <div class="field">
+          <label>成個腳本（連秒數，可拍/可交攝影師）</label>
+          <textarea id="p-script" rows="10">${escapeHtml(r.scriptText)}</textarea>
+          <div class="script-tools">
+            <button type="button" id="assemble-script">組裝腳本</button>
+            <button type="button" id="copy-script">複製腳本</button>
+          </div>
+        </div>
         <div class="field"><label>hashtag（3–8 個，逗號分隔）</label><input id="p-tags" value="${escapeHtml(r.hashtags.join(", "))}"></div>
         <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
       `;
@@ -597,6 +650,7 @@
       bind("#p-summary", "summary");
       bind("#p-cta", "cta");
       bind("#p-caption", "caption");
+      bind("#p-script", "scriptText");
       bind("#p-cover", "coverText");
       bind("#p-tags", "hashtags", (v) => v.split(/[,，]/).map((t) => t.trim()).filter(Boolean));
 
@@ -635,6 +689,10 @@
       if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
       const cpyBtn = panel.querySelector("#copy-caption");
       if (cpyBtn) cpyBtn.addEventListener("click", copyCaption);
+      const asmScrBtn = panel.querySelector("#assemble-script");
+      if (asmScrBtn) asmScrBtn.addEventListener("click", () => assembleScript(false));
+      const cpyScrBtn = panel.querySelector("#copy-script");
+      if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
       renderAiOptions();
     }
 
