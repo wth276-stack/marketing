@@ -61,6 +61,9 @@
     .ai-pick-card.selected { border-color: var(--rose); background: #fdeaf1; }
     .ai-pick-card .reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .ai-busy { opacity: .6; pointer-events: none; }
+    #p-caption { width: 100%; min-height: 120px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .caption-tools { display: flex; gap: 8px; margin: 6px 0; }
+    .caption-tools button { padding: 6px 12px; }
   </style>
 </head>
 <body>
@@ -494,6 +497,36 @@
       }
     }
 
+    function assembleCaption() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (r.caption && r.caption.trim() && !confirm("現有 caption 會被覆寫，繼續？")) return;
+      const parts = [
+        r.hook || "",
+        r.summary || r.coreMessage || "",
+        r.cta || "",
+        (Array.isArray(r.hashtags) ? r.hashtags : []).join(" ")
+      ].filter((s) => s && s.trim());
+      r.caption = parts.join("\n\n");
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyCaption() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.caption || !r.caption.trim()) { alert("caption 係空，無嘢可複製。"); return; }
+      const btn = document.getElementById("copy-caption");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(r.caption).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -536,7 +569,13 @@
         </div>
         <div class="field"><label>一句總結</label><input id="p-summary" value="${escapeHtml(r.summary)}"></div>
         <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
-        <div class="field"><label>caption 第一行</label><input id="p-caption" value="${escapeHtml(r.caption)}"></div>
+        <div class="field"><label>完整 caption（貼 IG 用）</label>
+          <textarea id="p-caption" rows="6">${escapeHtml(r.caption)}</textarea>
+          <div class="caption-tools">
+            <button type="button" id="assemble-caption">組裝全文</button>
+            <button type="button" id="copy-caption">複製</button>
+          </div>
+        </div>
         <div class="field"><label>hashtag（3–8 個，逗號分隔）</label><input id="p-tags" value="${escapeHtml(r.hashtags.join(", "))}"></div>
         <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
       `;
@@ -592,6 +631,10 @@
       if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
       const genContentBtn = panel.querySelector("#ai-generate-content");
       if (genContentBtn) genContentBtn.addEventListener("click", generateAiContent);
+      const asmBtn = panel.querySelector("#assemble-caption");
+      if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
+      const cpyBtn = panel.querySelector("#copy-caption");
+      if (cpyBtn) cpyBtn.addEventListener("click", copyCaption);
       renderAiOptions();
     }
 

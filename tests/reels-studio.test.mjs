@@ -133,3 +133,13 @@ test("reels-studio declares Stage B content generation + segment voiceover/subti
   assert.match(html, /seg-voice/);
   assert.match(html, /seg-sub/);
 });
+
+test("reels-studio declares full-caption assemble + copy", async () => {
+  const html = await readHtml();
+  for (const name of ["assembleCaption", "copyCaption"]) {
+    assert.match(html, new RegExp(`function ${name}\\(`), `missing function ${name}`);
+  }
+  assert.match(html, /id="assemble-caption"/);
+  assert.match(html, /id="copy-caption"/);
+  assert.match(html, /<textarea[^>]*id="p-caption"/);
+});
