@@ -513,7 +513,7 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "生成完整內容"; }
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiGeneratedAt ? "重新生成內容" : "生成完整內容"); }
       }
     }
 

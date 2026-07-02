@@ -209,4 +209,5 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v15", async () => {
   // generateAiOptions must re-render via renderPlan so the options label flips to "重新生成選項"
   assert.match(html, /saveReels\(state\);\s*renderPlan\(\);/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\)/);
+  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\)/);
 });
