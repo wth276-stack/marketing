@@ -37,7 +37,7 @@
     .field { margin: 10px 0; }
     .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
     .field input, .field select, .field textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
-    .seg-row { display: grid; grid-template-columns: 1fr 1fr 80px 1fr auto; gap: 6px; margin: 6px 0; }
+    .seg-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 70px 1fr auto; gap: 6px; margin: 6px 0; }
     .seg-row input { padding: 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
     .toolbar button, .toolbar label { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
@@ -49,6 +49,21 @@
       .app-shell { grid-template-columns: 1fr; }
       #reel-list { border-right: 0; border-bottom: 1px solid var(--line); }
     }
+    #ai-settings { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    #ai-settings > summary { padding: 8px 12px; cursor: pointer; font-weight: 700; list-style: none; }
+    #ai-settings > summary::before { content: "⚙️ "; }
+    .ai-settings-body { padding: 8px 12px 12px; border-top: 1px solid var(--line); }
+    .ai-note { font-size: 12px; color: #7a5b00; background: #fff3cd; padding: 6px 8px; border-radius: 6px; margin: 6px 0; }
+    .ai-block { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; background: #fff8fb; }
+    .ai-pick-group { margin: 10px 0; }
+    .ai-pick-group h4 { margin: 6px 0; font-size: 14px; }
+    .ai-pick-card { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; cursor: pointer; background: var(--panel); }
+    .ai-pick-card.selected { border-color: var(--rose); background: #fdeaf1; }
+    .ai-pick-card .reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .ai-busy { opacity: .6; pointer-events: none; }
+    #p-caption { width: 100%; min-height: 120px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .caption-tools { display: flex; gap: 8px; margin: 6px 0; }
+    .caption-tools button { padding: 6px 12px; }
   </style>
 </head>
 <body>
@@ -68,6 +83,21 @@
         <button type="button" class="primary" id="copy-ai-brief">複製 AI 拍片 brief</button>
         <button type="button" id="export-json">匯出 JSON</button>
         <label>匯入 JSON <input type="file" id="import-json" accept=".json" hidden></label>
+          <details id="ai-settings">
+            <summary>AI 設定</summary>
+            <div class="ai-settings-body">
+              <p class="ai-note">API key 只存本機瀏覽器，只會直接傳去 Google Gemini API。</p>
+              <div class="field"><label>Gemini API key</label><input type="password" id="ai-api-key" placeholder="AIza..."></div>
+              <div class="field"><label>模型</label>
+                <select id="ai-model">
+                  <option value="gemini-2.5-flash" selected>gemini-2.5-flash（快、免費額）</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                  <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                </select>
+              </div>
+              <button type="button" id="ai-save-config">儲存設定</button>
+            </div>
+          </details>
       </div>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="plan-panel">策劃</button>
@@ -83,6 +113,9 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
+    const CONFIG_KEY = "jessi-reels-gemini-config";
+    const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
+    const DEFAULT_MODEL = "gemini-2.5-flash";
     const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型"];
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
@@ -136,7 +169,7 @@
         structure: "反差型",
         hook: "",
         coreMessage: "",
-        segments: [{ label: "", shot: "", durationSec: 0, note: "" }],
+        segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
         cta: "",
         caption: "",
@@ -145,7 +178,10 @@
         checklist: {},
         score: {},
         scoreNotes: "",
-        publishedAt: null
+        publishedAt: null,
+        aiOptions: null,
+        aiPicks: { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null },
+        aiGeneratedAt: null
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
       for (const k of SCORE_KEYS) reel.score[k] = 0;
@@ -161,9 +197,20 @@
         merged.checklist = { ...base.checklist, ...(r.checklist || {}) };
         merged.score = { ...base.score, ...(r.score || {}) };
         if (!Array.isArray(merged.segments) || !merged.segments.length) {
-          merged.segments = [{ label: "", shot: "", durationSec: 0, note: "" }];
+          merged.segments = [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }];
         }
+        merged.segments = merged.segments.map((s) => ({
+          label: s.label || "",
+          shot: s.shot || "",
+          voiceover: s.voiceover || "",
+          subtitle: s.subtitle || "",
+          durationSec: Number(s.durationSec) || 0,
+          note: s.note || ""
+        }));
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
+        if (!merged.aiPicks || typeof merged.aiPicks !== "object") {
+          merged.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+        }
         return merged;
       });
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
@@ -234,6 +281,252 @@
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
+    function loadAiConfig() {
+      try {
+        const c = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+        return { apiKey: c.apiKey || "", model: c.model || DEFAULT_MODEL };
+      } catch {
+        return { apiKey: "", model: DEFAULT_MODEL };
+      }
+    }
+
+    function saveAiConfig(cfg) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+    }
+
+    async function callGemini(promptText, responseSchema) {
+      const cfg = loadAiConfig();
+      if (!cfg.apiKey) throw { type: "no-key" };
+      const url = GEMINI_ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent?key=" + encodeURIComponent(cfg.apiKey);
+      const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig: { responseMimeType: "application/json" } };
+      if (responseSchema) body.generationConfig.responseSchema = responseSchema;
+      let resp;
+      try {
+        resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      } catch {
+        throw { type: "network" };
+      }
+      if (resp.status === 401 || resp.status === 403) throw { type: "auth" };
+      if (resp.status === 429) throw { type: "quota" };
+      if (!resp.ok) throw { type: "network" };
+      let data;
+      try { data = await resp.json(); } catch { throw { type: "network" }; }
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      try { return JSON.parse(raw); } catch { throw { type: "parse", raw }; }
+    }
+
+    function handleAiError(e) {
+      if (e && e.type === "no-key") {
+        const d = document.getElementById("ai-settings"); if (d) d.open = true;
+        const k = document.getElementById("ai-api-key"); if (k) k.focus();
+        alert("請先喺「AI 設定」輸入 Gemini API key。");
+        return;
+      }
+      if (e && e.type === "auth") {
+        const d = document.getElementById("ai-settings"); if (d) d.open = true;
+        alert("API key 無效，請去「AI 設定」檢查。");
+        return;
+      }
+      if (e && e.type === "quota") { alert("額度用盡或太頻繁，稍後再試。"); return; }
+      if (e && e.type === "network") { alert("連唔到 Gemini，check 網絡。"); return; }
+      if (e && e.type === "parse") { alert("Gemini 回應格式異常，請再試。"); console.warn("Gemini raw:", e.raw); return; }
+      alert("發生未知錯誤。");
+    }
+
+    const AI_GROUP_ARRAY = {
+      structureAngle: "structureAngles",
+      lengthStyle: "lengthStyles",
+      ctaStyle: "ctaStyles",
+      broll: "brollSets"
+    };
+
+    const STAGE_A_SCHEMA = {
+      type: "object",
+      properties: {
+        structureAngles: { type: "array", items: { type: "object", properties: { structure: { type: "string" }, angle: { type: "string" }, reason: { type: "string" } }, required: ["structure", "angle", "reason"] } },
+        lengthStyles: { type: "array", items: { type: "object", properties: { lengthSec: { type: "integer" }, subtitleStyle: { type: "string" }, reason: { type: "string" } }, required: ["lengthSec", "subtitleStyle", "reason"] } },
+        ctaStyles: { type: "array", items: { type: "object", properties: { style: { type: "string" }, exampleRead: { type: "string" }, reason: { type: "string" } }, required: ["style", "exampleRead", "reason"] } },
+        brollSets: { type: "array", items: { type: "object", properties: { shots: { type: "array", items: { type: "string" } }, reason: { type: "string" } }, required: ["shots", "reason"] } }
+      },
+      required: ["structureAngles", "lengthStyles", "ctaStyles", "brollSets"]
+    };
+
+    function stageAPrompt(r) {
+      return [
+        "你是香港美容業 IG Reels 編導。根據以下輸入，為每個創作維度各出 2 至 3 個候選選項，每項附一句簡短 reason。繁體中文。",
+        "輸入：",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "CTA：" + r.cta,
+        "",
+        "輸出 JSON：structureAngles（結構+內容角度，structure 可選：反差型/清單型/結果先行型/問題解答型/拆解型/錯誤型）、lengthStyles（片長秒數 lengthSec + 字幕風格 subtitleStyle）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead）、brollSets（B-roll 鏡頭清單 shots）。每組 2–3 個。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiOptions() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.title.trim() || !r.hook.trim() || !r.coreMessage.trim() || !r.cta.trim()) {
+        alert("請先填齊主題、鉤子、重點、CTA 四格，再生成選項。");
+        return;
+      }
+      const btn = document.getElementById("ai-generate-options");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA);
+        r.aiOptions = data;
+        r.aiPicks = { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderAiOptions();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "AI 生成選項"; }
+      }
+    }
+
+    function renderAiOptions() {
+      const box = document.getElementById("ai-picks");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.aiOptions) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">填好上面四格，撳「AI 生成選項」由 AI 出創作選項俾你揀。</p>';
+        return;
+      }
+      const o = r.aiOptions;
+      const picks = r.aiPicks || {};
+      const group = (title, items, key, card) =>
+        `<div class="ai-pick-group"><h4>${title}</h4>` +
+        (Array.isArray(items) ? items : []).map((item, i) => {
+          const sel = JSON.stringify(picks[key]) === JSON.stringify(item);
+          return `<div class="ai-pick-card${sel ? " selected" : ""}" data-group="${key}" data-i="${i}">${card(item)}</div>`;
+        }).join("") + `</div>`;
+      const html =
+        group("結構 + 內容角度", o.structureAngles, "structureAngle", (x) => `<strong>${escapeHtml(x.structure)} · ${escapeHtml(x.angle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("片長 + 字幕風格", o.lengthStyles, "lengthStyle", (x) => `<strong>${Number(x.lengthSec) || 0}秒 · ${escapeHtml(x.subtitleStyle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("CTA 呈現方式", o.ctaStyles, "ctaStyle", (x) => `<strong>${escapeHtml(x.style)}</strong> — 「${escapeHtml(x.exampleRead)}」<div class="reason">${escapeHtml(x.reason)}</div>`) +
+        group("B-roll 拍攝元素", o.brollSets, "broll", (x) => `<strong>${(x.shots || []).map(escapeHtml).join("、")}</strong><div class="reason">${escapeHtml(x.reason)}</div>`);
+      box.innerHTML = html;
+      box.querySelectorAll(".ai-pick-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const r2 = activeReel();
+          if (!r2 || !r2.aiOptions) return;
+          const g = card.dataset.group;
+          const i = Number(card.dataset.i);
+          const arr = r2.aiOptions[AI_GROUP_ARRAY[g]];
+          if (!arr || !arr[i]) return;
+          r2.aiPicks = r2.aiPicks || { structureAngle: null, lengthStyle: null, ctaStyle: null, broll: null };
+          r2.aiPicks[g] = arr[i];
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderAiOptions();
+        });
+      });
+    }
+
+    const STAGE_B_SCHEMA = {
+      type: "object",
+      properties: {
+        segments: { type: "array", items: { type: "object", properties: { label: { type: "string" }, shot: { type: "string" }, voiceover: { type: "string" }, subtitle: { type: "string" }, durationSec: { type: "integer" } }, required: ["label", "shot", "voiceover", "subtitle", "durationSec"] } },
+        summary: { type: "string" },
+        caption: { type: "string" },
+        hashtags: { type: "array", items: { type: "string" } },
+        coverText: { type: "string" }
+      },
+      required: ["segments", "summary", "caption", "hashtags", "coverText"]
+    };
+
+    function stageBPrompt(r) {
+      const p = r.aiPicks || {};
+      const fmt = (obj) => (obj ? JSON.stringify(obj) : "（未揀）");
+      return [
+        "你是香港美容業 IG Reels 編導。根據以下輸入同已揀嘅創作選項，輸出完整可拍內容。繁體中文。",
+        "輸入：",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "CTA：" + r.cta,
+        "已揀結構+角度：" + fmt(p.structureAngle),
+        "已揀片長+字幕風格：" + fmt(p.lengthStyle),
+        "已揀 CTA 呈現：" + fmt(p.ctaStyle),
+        "已揀 B-roll：" + fmt(p.broll),
+        "",
+        "輸出 JSON：segments（逐鏡：label/shot 畫面/voiceover 旁白/subtitle 字幕/durationSec 秒數）、summary 一句總結、caption 成段完整 IG post caption（首行 hook + 內文 + CTA + hashtag 整合，可多行）、hashtags 3–8 個、coverText 封面大字。",
+        "要求：節奏密、鏡頭 0.5–2 秒、字幕短句分行、9:16 直拍主體放中間、旁白口語化。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateAiContent() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      const p = r.aiPicks || {};
+      if (!p.structureAngle || !p.lengthStyle || !p.ctaStyle || !p.broll) {
+        alert("先揀齊四組選項（結構+角度、片長+字幕風格、CTA 呈現、B-roll），再生成完整內容。");
+        return;
+      }
+      const btn = document.getElementById("ai-generate-content");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(stageBPrompt(r), STAGE_B_SCHEMA);
+        r.segments = (Array.isArray(data.segments) ? data.segments : []).map((s) => ({
+          label: s.label || "",
+          shot: s.shot || "",
+          voiceover: s.voiceover || "",
+          subtitle: s.subtitle || "",
+          durationSec: Number(s.durationSec) || 0,
+          note: ""
+        }));
+        if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+        r.summary = data.summary || "";
+        r.caption = data.caption || "";
+        r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
+        r.coverText = data.coverText || "";
+        if (p.structureAngle && p.structureAngle.structure) r.structure = p.structureAngle.structure;
+        r.aiGeneratedAt = new Date().toISOString();
+        r.updatedAt = r.aiGeneratedAt;
+        saveReels(state);
+        renderReelList();
+        renderPlan();
+        alert("已生成完整內容，可喺下面欄位微調。");
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "生成完整內容"; }
+      }
+    }
+
+    function assembleCaption() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (r.caption && r.caption.trim() && !confirm("現有 caption 會被覆寫，繼續？")) return;
+      const parts = [
+        r.hook || "",
+        r.summary || r.coreMessage || "",
+        r.cta || "",
+        (Array.isArray(r.hashtags) ? r.hashtags : []).join(" ")
+      ].filter((s) => s && s.trim());
+      r.caption = parts.join("\n\n");
+      r.updatedAt = new Date().toISOString();
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyCaption() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.caption || !r.caption.trim()) { alert("caption 係空，無嘢可複製。"); return; }
+      const btn = document.getElementById("copy-caption");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(r.caption).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -246,14 +539,24 @@
           (s, i) =>
             `<div class="seg-row" data-i="${i}">
               <input class="seg-label" placeholder="段落標題" value="${escapeHtml(s.label)}">
-              <input class="seg-shot" placeholder="鏡頭內容" value="${escapeHtml(s.shot)}">
+              <input class="seg-shot" placeholder="畫面" value="${escapeHtml(s.shot)}">
+              <input class="seg-voice" placeholder="旁白" value="${escapeHtml(s.voiceover || "")}">
+              <input class="seg-sub" placeholder="字幕" value="${escapeHtml(s.subtitle || "")}">
               <input class="seg-dur" type="number" min="0" placeholder="秒" value="${s.durationSec || 0}">
               <input class="seg-note" placeholder="備註" value="${escapeHtml(s.note)}">
               <button type="button" class="seg-del">✕</button>
             </div>`
         )
         .join("");
-      panel.innerHTML = `
+      const aiBlock = `
+        <div class="ai-block">
+          <div class="toolbar">
+            <button type="button" id="ai-generate-options">AI 生成選項</button>
+            <button type="button" class="primary" id="ai-generate-content">生成完整內容</button>
+          </div>
+          <div id="ai-picks"></div>
+        </div>`;
+      panel.innerHTML = aiBlock + `
         <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
         <div class="field"><label>結構</label>
           <select id="p-structure">${STRUCTURES.map((s) => `<option${s === r.structure ? " selected" : ""}>${s}</option>`).join("")}</select>
@@ -266,7 +569,13 @@
         </div>
         <div class="field"><label>一句總結</label><input id="p-summary" value="${escapeHtml(r.summary)}"></div>
         <div class="field"><label>CTA（引導留言/收藏/分享）</label><input id="p-cta" value="${escapeHtml(r.cta)}"></div>
-        <div class="field"><label>caption 第一行</label><input id="p-caption" value="${escapeHtml(r.caption)}"></div>
+        <div class="field"><label>完整 caption（貼 IG 用）</label>
+          <textarea id="p-caption" rows="6">${escapeHtml(r.caption)}</textarea>
+          <div class="caption-tools">
+            <button type="button" id="assemble-caption">組裝全文</button>
+            <button type="button" id="copy-caption">複製</button>
+          </div>
+        </div>
         <div class="field"><label>hashtag（3–8 個，逗號分隔）</label><input id="p-tags" value="${escapeHtml(r.hashtags.join(", "))}"></div>
         <div class="field"><label>封面大字</label><input id="p-cover" value="${escapeHtml(r.coverText)}"></div>
       `;
@@ -297,6 +606,8 @@
           r.segments[i] = {
             label: row.querySelector(".seg-label").value,
             shot: row.querySelector(".seg-shot").value,
+            voiceover: row.querySelector(".seg-voice").value,
+            subtitle: row.querySelector(".seg-sub").value,
             durationSec: Number(row.querySelector(".seg-dur").value) || 0,
             note: row.querySelector(".seg-note").value
           };
@@ -306,16 +617,25 @@
         row.querySelectorAll("input").forEach((el) => el.addEventListener("input", upd));
         row.querySelector(".seg-del").addEventListener("click", () => {
           r.segments.splice(i, 1);
-          if (!r.segments.length) r.segments.push({ label: "", shot: "", durationSec: 0, note: "" });
+          if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
           saveReels(state);
           renderPlan();
         });
       });
       panel.querySelector("#seg-add").addEventListener("click", () => {
-        r.segments.push({ label: "", shot: "", durationSec: 0, note: "" });
+        r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
         saveReels(state);
         renderPlan();
       });
+      const genOptsBtn = panel.querySelector("#ai-generate-options");
+      if (genOptsBtn) genOptsBtn.addEventListener("click", generateAiOptions);
+      const genContentBtn = panel.querySelector("#ai-generate-content");
+      if (genContentBtn) genContentBtn.addEventListener("click", generateAiContent);
+      const asmBtn = panel.querySelector("#assemble-caption");
+      if (asmBtn) asmBtn.addEventListener("click", assembleCaption);
+      const cpyBtn = panel.querySelector("#copy-caption");
+      if (cpyBtn) cpyBtn.addEventListener("click", copyCaption);
+      renderAiOptions();
     }
 
     function renderShootChecklist() {
@@ -490,7 +810,7 @@
       const r = activeReel();
       if (!r) return "";
       const segs = r.segments
-        .map((s, i) => `Step ${i + 1}：${s.label || "（段落）"} — ${s.shot || ""}（${s.durationSec || "?"}秒）${s.note ? " // " + s.note : ""}`)
+        .map((s, i) => `Step ${i + 1}：${s.label || "（段落）"} — 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}（${s.durationSec || "?"}秒）${s.note ? " // " + s.note : ""}`)
         .join("\n");
       return [
         "【Reels 拍片 brief — Jessi Beauty】",
@@ -504,7 +824,7 @@
         "",
         "總結：" + (r.summary || "（待填）"),
         "CTA：" + (r.cta || "（待填）"),
-        "caption 第一行：" + (r.caption || "（待填）"),
+        "完整 caption：" + (r.caption || "（待填）"),
         "hashtag：" + (r.hashtags.length ? r.hashtags.join(" ") : "（待填）"),
         "封面大字：" + (r.coverText || "（待填）"),
         "",
@@ -569,6 +889,18 @@
     document.getElementById("import-json").addEventListener("change", importJsonFile);
     document.getElementById("delete-reel").addEventListener("click", deleteReel);
     document.getElementById("duplicate-reel").addEventListener("click", duplicateReel);
+    (function initAiSettings() {
+      const cfg = loadAiConfig();
+      const keyEl = document.getElementById("ai-api-key");
+      const modelEl = document.getElementById("ai-model");
+      if (keyEl) keyEl.value = cfg.apiKey;
+      if (modelEl) modelEl.value = cfg.model;
+      const saveBtn = document.getElementById("ai-save-config");
+      if (saveBtn) saveBtn.addEventListener("click", () => {
+        saveAiConfig({ apiKey: (keyEl ? keyEl.value : "").trim(), model: modelEl ? modelEl.value : DEFAULT_MODEL });
+        alert("AI 設定已儲存。");
+      });
+    })();
   </script>
 </body>
 </html>
