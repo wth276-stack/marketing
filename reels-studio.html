@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#c96b8a">
+  <title>Jessi Beauty · Reels 拍片工作室</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="assets/jessi-auth.css?v=20260627a">
+  <script src="assets/jessi-auth-config.js?v=20260627a"></script>
+  <script src="assets/jessi-auth.js?v=20260627a"></script>
+  <style>
+    :root {
+      --rose: #c96b8a;
+      --ink: #2b2230;
+      --muted: #7a6f7a;
+      --paper: #fff5f8;
+      --panel: #ffffff;
+      --line: #ead9e2;
+      --shadow: 0 18px 48px rgba(43, 34, 48, .12);
+      --radius: 10px;
+      font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); }
+    .app-shell { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh; }
+    #reel-list { padding: 16px; border-right: 1px solid var(--line); }
+    .reel-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+    .reel-item.active { background: #fdeaf1; border-color: var(--rose); }
+    .main { padding: 20px 24px; }
+    #privacy { background: #fff3cd; color: #7a5b00; padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+    .tabs { display: flex; gap: 8px; margin: 14px 0; }
+    .tab-btn { padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; cursor: pointer; }
+    .tab-btn.active { background: var(--rose); color: #fff; border-color: var(--rose); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .field { margin: 10px 0; }
+    .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+    .seg-row { display: grid; grid-template-columns: 1fr 1fr 80px 1fr auto; gap: 6px; margin: 6px 0; }
+    .seg-row input { padding: 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .toolbar button, .toolbar label { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; font: inherit; }
+    .toolbar button.primary { background: var(--rose); color: #fff; }
+    .progress { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin: 10px 0; }
+    .progress > div { height: 100%; background: var(--rose); }
+    .weak { color: #c0392b; font-weight: 700; }
+    @media (max-width: 720px) {
+      .app-shell { grid-template-columns: 1fr; }
+      #reel-list { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <p id="privacy">⚠️ 私隱提醒：唔好輸入客人全名、電話、完整對話或相片。</p>
+  <div class="app-shell">
+    <aside id="reel-list">
+      <div class="toolbar">
+        <button type="button" class="primary" id="new-reel">+ 新增 Reel</button>
+        <button type="button" id="duplicate-reel">複製</button>
+        <button type="button" id="delete-reel">刪除</button>
+      </div>
+      <div id="reel-items"></div>
+    </aside>
+    <main class="main">
+      <div id="reel-toolbar" class="toolbar">
+        <button type="button" id="import-theme">從今週主題帶入</button>
+        <button type="button" class="primary" id="copy-ai-brief">複製 AI 拍片 brief</button>
+        <button type="button" id="export-json">匯出 JSON</button>
+        <label>匯入 JSON <input type="file" id="import-json" accept=".json" hidden></label>
+      </div>
+      <div class="tabs">
+        <button type="button" class="tab-btn active" data-tab="plan-panel">策劃</button>
+        <button type="button" class="tab-btn" data-tab="shoot-panel">拍攝日</button>
+        <button type="button" class="tab-btn" data-tab="review-panel">復盤</button>
+      </div>
+      <section id="plan-panel" class="panel active"></section>
+      <section id="shoot-panel" class="panel"></section>
+      <section id="review-panel" class="panel"></section>
+    </main>
+  </div>
+  <script>
+    // placeholder — 後續 task 填入
+  </script>
+</body>
+</html>
