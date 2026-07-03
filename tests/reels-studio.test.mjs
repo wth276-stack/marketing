@@ -426,3 +426,18 @@ test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () =>
   assert.match(html, /state\.ideaDrafts = state\.ideaDrafts\.filter\(\(d\) => !d\.selected\)/);
   assert.match(html, /已建立 /);
 });
+
+test("reels-studio Idea 批量生成 — UI panel + render", async () => {
+  const html = await readHtml();
+  for (const id of ["open-idea-batch", "idea-batch-panel", "idea-batch-topic", "idea-batch-core", "ai-generate-ideas", "idea-drafts", "create-reels-from-drafts", "idea-draft-count", "clear-idea-drafts"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /function renderIdeaDrafts\(/);
+  assert.match(html, /批量出 Idea/);
+  assert.match(html, /建立選中嘅 reel/);
+  assert.match(html, /品牌資料 \+ 受眾.*已自動套用/);
+  assert.match(html, /\.idea-draft-card\s*\{/);
+  assert.match(html, /addEventListener\("click", generateAiIdeas\)/);
+  assert.match(html, /addEventListener\("click", createReelsFromDrafts\)/);
+  assert.match(html, /已揀 /);
+});

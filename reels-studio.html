@@ -96,6 +96,21 @@
     .polished-block label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
     .polished-block textarea { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; box-sizing: border-box; }
     .polished-block button { margin-top: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--rose); background: var(--panel); cursor: pointer; }
+    .idea-batch-panel { margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .idea-batch-panel[hidden] { display: none; }
+    .idea-batch-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    .idea-batch-note { font-size: 12px; color: var(--muted); }
+    .idea-draft-count { font-size: 12px; color: var(--muted); margin: 4px 0; }
+    .idea-empty { color: var(--muted); font-size: 13px; }
+    .idea-draft-group { margin: 8px 0; }
+    .idea-group-title { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+    .idea-draft-card { display: flex; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin: 4px 0; }
+    .idea-draft-card.selected { border-color: var(--accent); background: rgba(201,107,138,0.08); }
+    .idea-draft-check { flex: 0 0 auto; }
+    .idea-draft-body { flex: 1 1 auto; }
+    .idea-draft-title { font-weight: 700; }
+    .idea-draft-core { font-size: 13px; margin-top: 2px; }
+    .idea-draft-rationale { font-size: 12px; color: var(--muted); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -104,10 +119,25 @@
     <aside id="reel-list">
       <div class="toolbar">
         <button type="button" class="primary" id="new-reel">+ 新增 Reel</button>
+        <button type="button" id="open-idea-batch">批量出 Idea</button>
         <button type="button" id="duplicate-reel">複製</button>
         <button type="button" id="delete-reel">刪除</button>
       </div>
       <div id="reel-items"></div>
+      <div id="idea-batch-panel" class="idea-batch-panel" hidden>
+        <div class="field"><label>主題</label><input id="idea-batch-topic" placeholder="例如 HIFU / 夏日控油 / 產後修腹"></div>
+        <div class="field"><label>重點提示（選填）</label><input id="idea-batch-core" placeholder="想強調嘅角度或賣點，可唔填"></div>
+        <div class="idea-batch-toolbar">
+          <button type="button" class="primary" id="ai-generate-ideas">AI 生成 Idea</button>
+          <span class="idea-batch-note">品牌資料 + 受眾（30-55 歲女性）已自動套用</span>
+        </div>
+        <div id="idea-draft-count" class="idea-draft-count"></div>
+        <div id="idea-drafts"></div>
+        <div class="idea-batch-toolbar">
+          <button type="button" id="clear-idea-drafts">全清勾選</button>
+          <button type="button" class="primary" id="create-reels-from-drafts" disabled>建立選中嘅 reel</button>
+        </div>
+      </div>
     </aside>
     <main class="main">
       <div id="reel-toolbar" class="toolbar">
@@ -1800,6 +1830,19 @@
     }
 
     document.getElementById("new-reel").addEventListener("click", addReel);
+    document.getElementById("open-idea-batch").addEventListener("click", () => {
+      const panel = document.getElementById("idea-batch-panel");
+      if (panel) panel.hidden = !panel.hidden;
+    });
+    document.getElementById("ai-generate-ideas").addEventListener("click", generateAiIdeas);
+    document.getElementById("create-reels-from-drafts").addEventListener("click", createReelsFromDrafts);
+    document.getElementById("clear-idea-drafts").addEventListener("click", () => {
+      if (!Array.isArray(state.ideaDrafts)) return;
+      state.ideaDrafts.forEach((d) => { d.selected = false; });
+      saveReels(state);
+      renderIdeaDrafts();
+    });
+    renderIdeaDrafts();
     renderReelList();
     document.getElementById("copy-ai-brief").addEventListener("click", async () => {
       const brief = buildAiBrief();
