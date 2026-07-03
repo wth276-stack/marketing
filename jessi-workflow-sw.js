@@ -1,4 +1,4 @@
-const CACHE_NAME = "jessi-workflow-cache-v17";
+const CACHE_NAME = "jessi-workflow-cache-v18";
 
 /** Paths relative to service worker scope (site / project root). */
 const PRECACHE_PATHS = [
