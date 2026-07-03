@@ -210,7 +210,7 @@ CI（`deploy-pages.yml`）已包 `tests/reels-studio.test.mjs`，唔使改。
 - **數量 ~12-15 各版型覆蓋**（用最佳判斷）：對齊現有 10 個 STRUCTURES，Gemini 單次穩定。若用家想要更多（例如 ~20 跟策略文件 5 型各 4）可喺審 spec 時話我改 prompt + schema 上限。
 - **`ideaDrafts` 存 localStorage**：池唔會因 refresh 冇，但會長留——建立後移除已揀嘅，未揀嘅保留等用家再揀；若想完全清可重新生成（confirm）或加「清空池」掣（YAGNI，先唔做）。
 - **由 draft 建立 reel 只預填 3 欄**：`title / structure / coreMessage`。唔預填 hook / CTA / aiPicks——避免跳過 Step 0/1 用家判斷；每條 reel 仍要走完整 wizard。
-- **`r.structure` 預填後 Step 1 dropdown 顯示**：要確認 `renderPlan` 讀 `r.structure` 設 `#pick-structure` value（既有邏輯應已支援，實作時驗證）。
+- **`r.structure` 預填後 Step 1 dropdown 顯示**：`#pick-structure` 嘅 selected value 讀嘅係 `r.aiPicks?.structure`（唔係 `r.structure`，見 `reels-studio.html:1212`）。所以 `createReelsFromDrafts` 要同時 set `r.structure`（reel-list 顯示用）同 `r.aiPicks.structure`（Step 1 dropdown 顯示用）。`draft.structure` 若唔喺 `STRUCTURES` 10 型內，sanitize 做預設 `"反差型"`，避免 dropdown 冇對應 option。
 - **多一個 AI call（`generateAiIdeas`）**：多一次 API 費用 + 等候，但係入口 seeding 動作，唔係每條 reel 都跑；用家可選擇唔用批量、照舊 `#new-reel` 逐條開。
 - **SW v18→v19** 必須（`reels-studio.html` 係 precached）。
 - **不做跨 reel 批次 hook**：每條 reel 仍喺 Step 0 逐條 `generateAiHooks`。策略文件嘅「每條 idea 出 5 個 hook」已由既有 Step 0 Hook 生成覆蓋（用家揀版型 → AI 出 5-10 個 hook）。YAGNI 批次 hook。
