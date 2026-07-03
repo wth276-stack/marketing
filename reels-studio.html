@@ -114,6 +114,17 @@
     .idea-draft-title { font-weight: 700; }
     .idea-draft-core { font-size: 13px; margin-top: 2px; }
     .idea-draft-rationale { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .video-prompt-block { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+    .video-prompt-block label { font-size: 12px; color: var(--muted); display: block; margin-top: 4px; }
+    .video-prompt-block textarea { width: 100%; min-height: 60px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .video-prompt-meta { font-size: 12px; color: var(--muted); margin: 2px 0; }
+    .carousel-slide { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+    .carousel-slide .slide-type { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+    .carousel-slide input, .carousel-slide textarea { width: 100%; font: inherit; box-sizing: border-box; margin: 2px 0; }
+    .carousel-slide textarea { min-height: 50px; resize: vertical; }
+    .asset-note { width: 100%; min-height: 50px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .confirm-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .confirm-bar button { padding: 6px 12px; }
   </style>
 </head>
 <body>
@@ -1116,6 +1127,88 @@
       generateAiContent();
     }
 
+    const VIDEO_PROMPT_SCHEMA = {
+      type: "object",
+      properties: {
+        shots: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              segIndex: { type: "integer" },
+              label: { type: "string" },
+              visualPrompt: { type: "string" },
+              camera: { type: "string" },
+              lighting: { type: "string" },
+              durationSec: { type: "integer" }
+            },
+            required: ["segIndex", "label", "visualPrompt", "camera", "lighting", "durationSec"]
+          }
+        },
+        overallStyle: { type: "string" },
+        masterPrompt: { type: "string" }
+      },
+      required: ["shots", "overallStyle", "masterPrompt"]
+    };
+
+    function videoPromptPrompt(r) {
+      const p = r.aiPicks || {};
+      const segs = (Array.isArray(r.segments) ? r.segments : [])
+        .map((s, i) => `鏡${i + 1}（${s.durationSec || "?"}秒）：${s.label || ""} | 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可餵去 Veo / Runway / Sora 嘅影片生成 prompt。繁體中文 + 英文關鍵詞夾雜可。",
+        "主題：" + r.title,
+        "重點：" + r.coreMessage,
+        "已揀結構：" + (p.structure || "（未揀）"),
+        "已揀 B-roll：" + (p.broll ? JSON.stringify(p.broll) : "（未揀）"),
+        refBlock(r),
+        "",
+        "逐鏡結構：",
+        segs || "（無逐鏡資料，請按主題出 4-6 鏡）",
+        "",
+        "每鏡 prompt 要包含：visualPrompt（畫面內容、人物動作、場景）、camera（鏡頭運動：特寫/中景/平移/推進等）、lighting（光線：自然光/柔光箱/逆光等）、durationSec（秒數）、label（鏡頭名）、segIndex（由 0 開始）。",
+        "再出一條 masterPrompt（整體風格 + 連貫元素，可一次過生成長片用）+ overallStyle（一句整體視覺風格描述）。",
+        "品牌質感：美容沙龍、香港女性、自然、唔過度打燈。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.aiGeneratedAt) { alert("先生成完整內容（Step 2）再出影片 prompt。"); return; }
+      const btn = document.getElementById("ai-gen-video-prompts");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(videoPromptPrompt(r), VIDEO_PROMPT_SCHEMA);
+        r.videoPrompts = (Array.isArray(data.shots) ? data.shots : []).map((s) => ({
+          segIndex: Number(s.segIndex) || 0,
+          label: s.label || "",
+          visualPrompt: s.visualPrompt || "",
+          camera: s.camera || "",
+          lighting: s.lighting || "",
+          durationSec: Number(s.durationSec) || 0
+        }));
+        r.videoMasterPrompt = data.masterPrompt || "";
+        r.videoOverallStyle = data.overallStyle || "";
+        r.videoPromptAt = null;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.videoPrompts?.length ? "重新生成影片 prompt" : "AI 生成影片 prompt"); }
+      }
+    }
+
+    function regenerateVideoPrompts() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.videoPrompts && r.videoPrompts.length && !confirm("重新生成會拎走現有影片 prompt 同確認狀態，繼續？")) return;
+      generateVideoPrompts();
+    }
+
     const REVIEW_SCHEMA = {
       type: "object",
       properties: {
@@ -1324,6 +1417,63 @@
       }
     }
 
+    function renderVideoPrompts() {
+      const box = document.getElementById("video-prompt-list");
+      const masterBox = document.getElementById("video-master-prompt");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.videoPrompts || !r.videoPrompts.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成影片 prompt」根據逐鏡結構出每鏡影片生成 prompt。</p>';
+        if (masterBox) masterBox.value = r?.videoMasterPrompt || "";
+        return;
+      }
+      box.innerHTML = r.videoPrompts.map((v, i) =>
+        `<div class="video-prompt-block" data-i="${i}">
+          <div class="video-prompt-meta">鏡${i + 1}：${escapeHtml(v.label || "")}（${v.durationSec || 0}秒）| 鏡頭：${escapeHtml(v.camera || "")} | 光線：${escapeHtml(v.lighting || "")}</div>
+          <label>visualPrompt（可編輯）</label>
+          <textarea class="vp-visual">${escapeHtml(v.visualPrompt || "")}</textarea>
+        </div>`
+      ).join("");
+      if (masterBox) masterBox.value = r.videoMasterPrompt || "";
+    }
+
+    function confirmVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPrompts || !r.videoPrompts.length) { alert("先生成影片 prompt。"); return; }
+      const box = document.getElementById("video-prompt-list");
+      const masterBox = document.getElementById("video-master-prompt");
+      if (box) {
+        box.querySelectorAll(".video-prompt-block").forEach((blk) => {
+          const i = Number(blk.dataset.i);
+          if (r.videoPrompts[i]) r.videoPrompts[i].visualPrompt = blk.querySelector(".vp-visual").value;
+        });
+      }
+      if (masterBox) r.videoMasterPrompt = masterBox.value;
+      r.videoPromptAt = new Date().toISOString();
+      r.updatedAt = r.videoPromptAt;
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPrompts || !r.videoPrompts.length) { alert("影片 prompt 係空，無嘢可複製。"); return; }
+      const shots = r.videoPrompts.map((v, i) =>
+        `【鏡${i + 1}：${v.label || ""}（${v.durationSec || 0}秒）】\nCamera：${v.camera || ""}\nLighting：${v.lighting || ""}\nPrompt：${v.visualPrompt || ""}`
+      ).join("\n\n");
+      const text = `【Reels 影片生成 prompt — ${r.title || ""}】\n整體風格：${r.videoOverallStyle || ""}\n\n${shots}\n\n【Master prompt】\n${r.videoMasterPrompt || ""}`;
+      const btn = document.getElementById("copy-video-prompts");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function canAdvanceToStep1(r) {
       return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
     }
@@ -1496,7 +1646,18 @@
             </div>
           </div>
           <div class="wizard-step" data-step-n="4">
-            <p style="color:#7a6f7a;font-size:13px">Step 4 預留：影片素材生成 prompt（Task 2 實作）。</p>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-video-prompts">${r.videoPrompts && r.videoPrompts.length ? "重新生成影片 prompt" : "AI 生成影片 prompt"}</button>
+              </div>
+              <div id="video-prompt-list"></div>
+              <div class="field"><label>Master prompt（整體風格，可一次過生成長片）</label><textarea id="video-master-prompt" rows="3">${escapeHtml(r.videoMasterPrompt || "")}</textarea></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-video-prompts">${r.videoPromptAt ? "已確認（重新確認）" : "確認影片 prompt"}</button>
+                <button type="button" id="copy-video-prompts" ${r.videoPromptAt ? "" : "disabled"}>複製影片 prompt</button>
+              </div>
+              <div class="field"><label>已生成影片素材連結/備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="貼去 Veo/Runway 生成後，記低素材連結或備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+            </div>
           </div>
           <div class="wizard-step" data-step-n="5">
             <p style="color:#7a6f7a;font-size:13px">Step 5 預留：Carousel post 內容（Task 3 實作）。</p>
@@ -1653,11 +1814,25 @@
       if (asmScrBtn) asmScrBtn.addEventListener("click", () => assembleScript(false));
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
+      const genVideoBtn = panel.querySelector("#ai-gen-video-prompts");
+      if (genVideoBtn) genVideoBtn.addEventListener("click", regenerateVideoPrompts);
+      const confirmVideoBtn = panel.querySelector("#confirm-video-prompts");
+      if (confirmVideoBtn) confirmVideoBtn.addEventListener("click", confirmVideoPrompts);
+      const copyVideoBtn = panel.querySelector("#copy-video-prompts");
+      if (copyVideoBtn) copyVideoBtn.addEventListener("click", copyVideoPrompts);
+      const videoNoteEl = panel.querySelector("#video-asset-note");
+      if (videoNoteEl) videoNoteEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetNote = videoNoteEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
       renderHookCandidates();
       renderCtaPicker();
       renderScriptReview();
       renderAiOptions();
       renderDirectionCandidates();
+      renderVideoPrompts();
     }
 
     function renderShootChecklist() {

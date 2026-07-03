@@ -467,3 +467,31 @@ test("reels-studio v4 migrate spreads r + goWizardStep clamps 0-6", async () => 
   assert.match(html, /state\.reels = state\.reels\.map\(\(r\) => migrateReelToV4\(r\)\);/);
   assert.match(html, /n = Math\.max\(0, Math\.min\(6, n\)\);/);
 });
+
+test("reels-studio Step 4 影片素材生成 prompt", async () => {
+  const html = await readHtml();
+  assert.match(html, /const VIDEO_PROMPT_SCHEMA = \{/);
+  assert.match(html, /shots:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /visualPrompt:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /camera:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /lighting:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /masterPrompt:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /required:\s*\["shots",\s*"overallStyle",\s*"masterPrompt"\]/);
+  assert.match(html, /function videoPromptPrompt\(/);
+  assert.match(html, /function generateVideoPrompts\(/);
+  assert.match(html, /function regenerateVideoPrompts\(/);
+  assert.match(html, /function renderVideoPrompts\(/);
+  assert.match(html, /function confirmVideoPrompts\(/);
+  assert.match(html, /function copyVideoPrompts\(/);
+  assert.match(html, /callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA\)/);
+  for (const id of ["ai-gen-video-prompts", "video-prompt-list", "video-master-prompt", "confirm-video-prompts", "copy-video-prompts", "video-asset-note"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /r\.videoPrompts = \(Array\.isArray\(data\.shots\)/);
+  assert.match(html, /r\.videoMasterPrompt = data\.masterPrompt \|\| ""/);
+  assert.match(html, /r\.videoPromptAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有影片 prompt/);
+  assert.match(html, /refBlock\(r\)/);
+  assert.match(html, /Veo \/ Runway \/ Sora/);
+  assert.match(html, /canAdvanceToStep5\(r\)\s*\{\s*return !!r\.videoPromptAt;/);
+});
