@@ -148,7 +148,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -167,7 +167,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -194,12 +194,18 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
   assert.match(html, /copy\.wizardStep = 0/);
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-generate-content"/);
+  assert.match(html, /data-step-n="4"/);
+  assert.match(html, /data-step-n="5"/);
+  assert.match(html, /data-step-n="6"/);
+  assert.match(html, /function canAdvanceToStep4\(/);
+  assert.match(html, /function canAdvanceToStep5\(/);
+  assert.match(html, /function canAdvanceToStep6\(/);
 });
 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -344,12 +350,13 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /copy\.scriptReview = null/);
 });
 
-test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
+test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
-  assert.match(html, /const REEL_SCHEMA_VERSION = 3/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(html, /const REEL_SCHEMA_VERSION = 4/);
   assert.match(html, /function migrateReelToV3\(/);
+  assert.match(html, /function migrateReelToV4\(/);
   assert.match(html, /function inferWizardStep\(/);
   assert.match(html, /reelsSchemaVersion/);
   assert.match(html, /r\.wizardStep - 1/);
@@ -358,6 +365,12 @@ test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
   assert.match(html, /directionCandidates:\s*\[\]/);
   assert.match(html, /contentDirection:\s*""/);
   assert.match(html, /contentDirectionAt:\s*null/);
+  assert.match(html, /videoPrompts:\s*\[\]/);
+  assert.match(html, /carousel:\s*\[\]/);
+  assert.match(html, /imagePrompts:\s*\[\]/);
+  assert.match(html, /videoPromptAt:\s*null/);
+  assert.match(html, /carouselConfirmedAt:\s*null/);
+  assert.match(html, /imagePromptAt:\s*null/);
 });
 
 test("reels-studio Stage A 拆分 + 方向建議 + aiPicks 6 格", async () => {
@@ -396,7 +409,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -441,4 +454,96 @@ test("reels-studio Idea 批量生成 — UI panel + render", async () => {
   assert.match(html, /addEventListener\("click", generateAiIdeas\)/);
   assert.match(html, /addEventListener\("click", createReelsFromDrafts\)/);
   assert.match(html, /已揀 /);
+});
+
+test("reels-studio v4 migrate spreads r + goWizardStep clamps 0-6", async () => {
+  const html = await readHtml();
+  assert.match(html, /function migrateReelToV4\(r\) \{\s*const out = \{\s*\.\.\.r\s*\};/);
+  assert.doesNotMatch(html, /migrateReelToV4[\s\S]{0,200}?migrateReelToV3/);
+  assert.match(html, /if \(!Array\.isArray\(out\.videoPrompts\)\) out\.videoPrompts = \[\];/);
+  assert.match(html, /if \(typeof out\.videoMasterPrompt !== "string"\) out\.videoMasterPrompt = "";/);
+  assert.match(html, /if \(out\.carouselConfirmedAt === undefined\) out\.carouselConfirmedAt = null;/);
+  assert.match(html, /if \(state\.reelsSchemaVersion < 4\) \{/);
+  assert.match(html, /state\.reels = state\.reels\.map\(\(r\) => migrateReelToV4\(r\)\);/);
+  assert.match(html, /n = Math\.max\(0, Math\.min\(6, n\)\);/);
+});
+
+test("reels-studio Step 4 影片素材生成 prompt", async () => {
+  const html = await readHtml();
+  assert.match(html, /const VIDEO_PROMPT_SCHEMA = \{/);
+  assert.match(html, /shots:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /visualPrompt:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /camera:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /lighting:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /masterPrompt:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /required:\s*\["shots",\s*"overallStyle",\s*"masterPrompt"\]/);
+  assert.match(html, /function videoPromptPrompt\(/);
+  assert.match(html, /function generateVideoPrompts\(/);
+  assert.match(html, /function regenerateVideoPrompts\(/);
+  assert.match(html, /function renderVideoPrompts\(/);
+  assert.match(html, /function confirmVideoPrompts\(/);
+  assert.match(html, /function copyVideoPrompts\(/);
+  assert.match(html, /callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA\)/);
+  for (const id of ["ai-gen-video-prompts", "video-prompt-list", "video-master-prompt", "confirm-video-prompts", "copy-video-prompts", "video-asset-note"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /r\.videoPrompts = \(Array\.isArray\(data\.shots\)/);
+  assert.match(html, /r\.videoMasterPrompt = data\.masterPrompt \|\| ""/);
+  assert.match(html, /r\.videoPromptAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有影片 prompt/);
+  assert.match(html, /refBlock\(r\)/);
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
+  assert.match(html, /Veo \/ Runway \/ Sora/);
+  assert.match(html, /canAdvanceToStep5\(r\)\s*\{\s*return !!r\.videoPromptAt;/);
+});
+
+test("reels-studio Step 5 Carousel post 內容", async () => {
+  const html = await readHtml();
+  assert.match(html, /const CAROUSEL_SCHEMA = \{/);
+  assert.match(html, /slides:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /slideType:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /required:\s*\["slideType",\s*"title",\s*"body",\s*"cta"\]/);
+  assert.match(html, /function carouselPrompt\(/);
+  assert.match(html, /function generateCarousel\(/);
+  assert.match(html, /function regenerateCarousel\(/);
+  assert.match(html, /function renderCarousel\(/);
+  assert.match(html, /function confirmCarousel\(/);
+  assert.match(html, /callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA\)/);
+  for (const id of ["ai-gen-carousel", "carousel-slides", "carousel-add", "confirm-carousel"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
+  assert.match(html, /r\.carousel = \(Array\.isArray\(data\.slides\)/);
+  assert.match(html, /r\.carouselAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /r\.carouselConfirmedAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有 Carousel/);
+  assert.match(html, /6 張 slide/);
+  assert.match(html, /canAdvanceToStep6\(r\)\s*\{\s*return !!r\.carouselConfirmedAt;/);
+});
+
+test("reels-studio Step 6 圖片生成 prompt", async () => {
+  const html = await readHtml();
+  assert.match(html, /const IMAGE_PROMPT_SCHEMA = \{/);
+  assert.match(html, /prompts:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /slideIndex:\s*\{\s*type:\s*"integer"\s*\}/);
+  assert.match(html, /required:\s*\["slideIndex",\s*"prompt"\]/);
+  assert.match(html, /function imagePromptPrompt\(/);
+  assert.match(html, /function generateImagePrompts\(/);
+  assert.match(html, /function regenerateImagePrompts\(/);
+  assert.match(html, /function renderImagePrompts\(/);
+  assert.match(html, /function confirmImagePrompts\(/);
+  assert.match(html, /function copyImagePrompts\(/);
+  assert.match(html, /callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA\)/);
+  for (const id of ["ai-gen-image-prompts", "image-prompt-list", "confirm-image-prompts", "copy-image-prompts", "image-asset-note"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /r\.imagePrompts = \(Array\.isArray\(data\.prompts\)/);
+  assert.match(html, /r\.imagePromptAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有圖片 prompt/);
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
+  assert.match(html, /美容沙龍/);
+  assert.match(html, /#c96b8a/);
+  assert.match(html, /自然光/);
+  assert.match(html, /4:5/);
+  assert.match(html, /Midjourney \/ 即夢 \/ Imagen/);
 });

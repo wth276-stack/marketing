@@ -72,7 +72,10 @@
     .wizard[data-step="0"] .wizard-step[data-step-n="0"],
     .wizard[data-step="1"] .wizard-step[data-step-n="1"],
     .wizard[data-step="2"] .wizard-step[data-step-n="2"],
-    .wizard[data-step="3"] .wizard-step[data-step-n="3"] { display: block; }
+    .wizard[data-step="3"] .wizard-step[data-step-n="3"],
+    .wizard[data-step="4"] .wizard-step[data-step-n="4"],
+    .wizard[data-step="5"] .wizard-step[data-step-n="5"],
+    .wizard[data-step="6"] .wizard-step[data-step-n="6"] { display: block; }
     .wizard-dots { display: flex; gap: 8px; margin: 8px 0; }
     .wizard-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--line); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
     .wizard-dot.active { background: var(--accent); }
@@ -111,6 +114,17 @@
     .idea-draft-title { font-weight: 700; }
     .idea-draft-core { font-size: 13px; margin-top: 2px; }
     .idea-draft-rationale { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .video-prompt-block { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+    .video-prompt-block label { font-size: 12px; color: var(--muted); display: block; margin-top: 4px; }
+    .video-prompt-block textarea { width: 100%; min-height: 60px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .video-prompt-meta { font-size: 12px; color: var(--muted); margin: 2px 0; }
+    .carousel-slide { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+    .carousel-slide .slide-type { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+    .carousel-slide input, .carousel-slide textarea { width: 100%; font: inherit; box-sizing: border-box; margin: 2px 0; }
+    .carousel-slide textarea { min-height: 50px; resize: vertical; }
+    .asset-note { width: 100%; min-height: 50px; font: inherit; resize: vertical; box-sizing: border-box; }
+    .confirm-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .confirm-bar button { padding: 6px 12px; }
   </style>
 </head>
 <body>
@@ -175,7 +189,7 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
-    const REEL_SCHEMA_VERSION = 3;
+    const REEL_SCHEMA_VERSION = 4;
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -300,6 +314,17 @@
         aiPicks: { structure: null, angle: null, lengthSec: null, subtitleStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
         scriptText: "",
+        videoPrompts: [],
+        videoMasterPrompt: "",
+        videoOverallStyle: "",
+        videoPromptAt: null,
+        videoAssetNote: "",
+        carousel: [],
+        carouselAt: null,
+        carouselConfirmedAt: null,
+        imagePrompts: [],
+        imagePromptAt: null,
+        imageAssetNote: "",
         wizardStep: 0
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
@@ -329,12 +354,32 @@
       return out;
     }
 
+    function migrateReelToV4(r) {
+      const out = { ...r };
+      if (!Array.isArray(out.videoPrompts)) out.videoPrompts = [];
+      if (typeof out.videoMasterPrompt !== "string") out.videoMasterPrompt = "";
+      if (typeof out.videoOverallStyle !== "string") out.videoOverallStyle = "";
+      if (out.videoPromptAt === undefined) out.videoPromptAt = null;
+      if (typeof out.videoAssetNote !== "string") out.videoAssetNote = "";
+      if (!Array.isArray(out.carousel)) out.carousel = [];
+      if (out.carouselAt === undefined) out.carouselAt = null;
+      if (out.carouselConfirmedAt === undefined) out.carouselConfirmedAt = null;
+      if (!Array.isArray(out.imagePrompts)) out.imagePrompts = [];
+      if (out.imagePromptAt === undefined) out.imagePromptAt = null;
+      if (typeof out.imageAssetNote !== "string") out.imageAssetNote = "";
+      return out;
+    }
+
     function normalize(state) {
       if (!state || typeof state !== "object") state = { reels: [], activeReelId: null };
       if (!Array.isArray(state.reels)) state.reels = [];
       if (state.reelsSchemaVersion === undefined || state.reelsSchemaVersion < 3) {
         state.reels = state.reels.map((r) => migrateReelToV3(r));
         state.reelsSchemaVersion = 3;
+      }
+      if (state.reelsSchemaVersion < 4) {
+        state.reels = state.reels.map((r) => migrateReelToV4(r));
+        state.reelsSchemaVersion = 4;
       }
       state.reels = state.reels.map((r) => {
         const base = newReel();
@@ -1082,6 +1127,226 @@
       generateAiContent();
     }
 
+    const VIDEO_PROMPT_SCHEMA = {
+      type: "object",
+      properties: {
+        shots: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              segIndex: { type: "integer" },
+              label: { type: "string" },
+              visualPrompt: { type: "string" },
+              camera: { type: "string" },
+              lighting: { type: "string" },
+              durationSec: { type: "integer" }
+            },
+            required: ["segIndex", "label", "visualPrompt", "camera", "lighting", "durationSec"]
+          }
+        },
+        overallStyle: { type: "string" },
+        masterPrompt: { type: "string" }
+      },
+      required: ["shots", "overallStyle", "masterPrompt"]
+    };
+
+    const CAROUSEL_SCHEMA = {
+      type: "object",
+      properties: {
+        slides: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slideType: { type: "string" },
+              title: { type: "string" },
+              body: { type: "string" },
+              cta: { type: "string" }
+            },
+            required: ["slideType", "title", "body", "cta"]
+          }
+        }
+      },
+      required: ["slides"]
+    };
+
+    const IMAGE_PROMPT_SCHEMA = {
+      type: "object",
+      properties: {
+        prompts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slideIndex: { type: "integer" },
+              prompt: { type: "string" }
+            },
+            required: ["slideIndex", "prompt"]
+          }
+        }
+      },
+      required: ["prompts"]
+    };
+
+    function imagePromptPrompt(r) {
+      const slides = (Array.isArray(r.carousel) ? r.carousel : [])
+        .map((s, i) => `Slide ${i + 1}（${s.slideType || "content"}）：${s.title || ""} — ${s.body || ""}`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Carousel 圖片生成 prompt 編導。根據以下每張 slide 嘅內容，各出一條可餵去 Midjourney / 即夢 / Imagen 嘅圖片生成 prompt。英文為主，關鍵詞風格。",
+        "主題：" + r.title,
+        "受眾：" + AUDIENCE,
+        refBlock(r),
+        "",
+        "Carousel slide 內容：",
+        slides || "（無 carousel，請按主題出 6 張）",
+        "",
+        "風格固定：美容沙龍質感、香港 30-55 歲女性、自然光、品牌色 #c96b8a 點綴、乾淨背景、IG carousel 尺度 4:5。",
+        "cover slide 要吸睛、content slide 要清晰可讀（留位疊字）、cta slide 要留白可疊字。",
+        "每條 prompt 對應一張 slide，slideIndex 由 0 開始。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    function carouselPrompt(r) {
+      return [
+        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容。繁體中文、廣東話自然。",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "完整 caption（參考）：" + (r.caption || ""),
+        "互動目標：" + (r.interactionGoal || "未定"),
+        "語氣：" + r.tone,
+        "受眾：" + AUDIENCE,
+        refBlock(r),
+        "",
+        "6 張 slide 結構：slide 1 係 cover（slideType=\"cover\"，hook + 大標，引人停低）；slide 2-5 係 content（slideType=\"content\"，每張一個重點點列，承接主題）；slide 6 係 cta（slideType=\"cta\"，CTA slide，呼應互動目標）。",
+        "每張含 title、body、cta（cta slide 先填 cta，其餘可空字串）。嚴格跟 JSON schema。唔好亂作療程價錢。"
+      ].join("\n");
+    }
+
+    function videoPromptPrompt(r) {
+      const p = r.aiPicks || {};
+      const segs = (Array.isArray(r.segments) ? r.segments : [])
+        .map((s, i) => `鏡${i + 1}（${s.durationSec || "?"}秒）：${s.label || ""} | 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可餵去 Veo / Runway / Sora 嘅影片生成 prompt。繁體中文 + 英文關鍵詞夾雜可。",
+        "主題：" + r.title,
+        "重點：" + r.coreMessage,
+        "已揀結構：" + (p.structure || "（未揀）"),
+        "已揀 B-roll：" + (p.broll ? JSON.stringify(p.broll) : "（未揀）"),
+        "受眾：" + AUDIENCE,
+        refBlock(r),
+        "",
+        "逐鏡結構：",
+        segs || "（無逐鏡資料，請按主題出 4-6 鏡）",
+        "",
+        "每鏡 prompt 要包含：visualPrompt（畫面內容、人物動作、場景）、camera（鏡頭運動：特寫/中景/平移/推進等）、lighting（光線：自然光/柔光箱/逆光等）、durationSec（秒數）、label（鏡頭名）、segIndex（由 0 開始）。",
+        "再出一條 masterPrompt（整體風格 + 連貫元素，可一次過生成長片用）+ overallStyle（一句整體視覺風格描述）。",
+        "品牌質感：美容沙龍、香港女性、自然、唔過度打燈。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
+    async function generateVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.aiGeneratedAt) { alert("先生成完整內容（Step 2）再出影片 prompt。"); return; }
+      const btn = document.getElementById("ai-gen-video-prompts");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(videoPromptPrompt(r), VIDEO_PROMPT_SCHEMA);
+        r.videoPrompts = (Array.isArray(data.shots) ? data.shots : []).map((s) => ({
+          segIndex: Number(s.segIndex) || 0,
+          label: s.label || "",
+          visualPrompt: s.visualPrompt || "",
+          camera: s.camera || "",
+          lighting: s.lighting || "",
+          durationSec: Number(s.durationSec) || 0
+        }));
+        r.videoMasterPrompt = data.masterPrompt || "";
+        r.videoOverallStyle = data.overallStyle || "";
+        r.videoPromptAt = null;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.videoPrompts?.length ? "重新生成影片 prompt" : "AI 生成影片 prompt"); }
+      }
+    }
+
+    function regenerateVideoPrompts() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.videoPrompts && r.videoPrompts.length && !confirm("重新生成會拎走現有影片 prompt 同確認狀態，繼續？")) return;
+      generateVideoPrompts();
+    }
+
+    async function generateCarousel() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPromptAt) { alert("先喺 Step 4 確認影片 prompt。"); return; }
+      const btn = document.getElementById("ai-gen-carousel");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(carouselPrompt(r), CAROUSEL_SCHEMA);
+        r.carousel = (Array.isArray(data.slides) ? data.slides : []).map((s) => ({
+          slideType: s.slideType || "content",
+          title: s.title || "",
+          body: s.body || "",
+          cta: s.cta || ""
+        }));
+        r.carouselAt = new Date().toISOString();
+        r.carouselConfirmedAt = null;
+        r.updatedAt = r.carouselAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.carousel?.length ? "重新生成 Carousel" : "AI 生成 Carousel"); }
+      }
+    }
+
+    function regenerateCarousel() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.carousel && r.carousel.length && !confirm("重新生成會拎走現有 Carousel，繼續？")) return;
+      generateCarousel();
+    }
+
+    async function generateImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.carouselConfirmedAt) { alert("先喺 Step 5 確認 Carousel。"); return; }
+      const btn = document.getElementById("ai-gen-image-prompts");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(imagePromptPrompt(r), IMAGE_PROMPT_SCHEMA);
+        r.imagePrompts = (Array.isArray(data.prompts) ? data.prompts : []).map((p) => ({
+          slideIndex: Number(p.slideIndex) || 0,
+          prompt: p.prompt || ""
+        }));
+        r.imagePromptAt = null;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.imagePrompts?.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt"); }
+      }
+    }
+
+    function regenerateImagePrompts() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.imagePrompts && r.imagePrompts.length && !confirm("重新生成會拎走現有圖片 prompt 同確認狀態，繼續？")) return;
+      generateImagePrompts();
+    }
+
     const REVIEW_SCHEMA = {
       type: "object",
       properties: {
@@ -1290,6 +1555,164 @@
       }
     }
 
+    function renderVideoPrompts() {
+      const box = document.getElementById("video-prompt-list");
+      const masterBox = document.getElementById("video-master-prompt");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.videoPrompts || !r.videoPrompts.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成影片 prompt」根據逐鏡結構出每鏡影片生成 prompt。</p>';
+        if (masterBox) masterBox.value = r?.videoMasterPrompt || "";
+        return;
+      }
+      box.innerHTML = r.videoPrompts.map((v, i) =>
+        `<div class="video-prompt-block" data-i="${i}">
+          <div class="video-prompt-meta">鏡${i + 1}：${escapeHtml(v.label || "")}（${v.durationSec || 0}秒）| 鏡頭：${escapeHtml(v.camera || "")} | 光線：${escapeHtml(v.lighting || "")}</div>
+          <label>visualPrompt（可編輯）</label>
+          <textarea class="vp-visual">${escapeHtml(v.visualPrompt || "")}</textarea>
+        </div>`
+      ).join("");
+      if (masterBox) masterBox.value = r.videoMasterPrompt || "";
+    }
+
+    function confirmVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPrompts || !r.videoPrompts.length) { alert("先生成影片 prompt。"); return; }
+      const box = document.getElementById("video-prompt-list");
+      const masterBox = document.getElementById("video-master-prompt");
+      if (box) {
+        box.querySelectorAll(".video-prompt-block").forEach((blk) => {
+          const i = Number(blk.dataset.i);
+          if (r.videoPrompts[i]) r.videoPrompts[i].visualPrompt = blk.querySelector(".vp-visual").value;
+        });
+      }
+      if (masterBox) r.videoMasterPrompt = masterBox.value;
+      r.videoPromptAt = new Date().toISOString();
+      r.updatedAt = r.videoPromptAt;
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyVideoPrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPrompts || !r.videoPrompts.length) { alert("影片 prompt 係空，無嘢可複製。"); return; }
+      const shots = r.videoPrompts.map((v, i) =>
+        `【鏡${i + 1}：${v.label || ""}（${v.durationSec || 0}秒）】\nCamera：${v.camera || ""}\nLighting：${v.lighting || ""}\nPrompt：${v.visualPrompt || ""}`
+      ).join("\n\n");
+      const text = `【Reels 影片生成 prompt — ${r.title || ""}】\n整體風格：${r.videoOverallStyle || ""}\n\n${shots}\n\n【Master prompt】\n${r.videoMasterPrompt || ""}`;
+      const btn = document.getElementById("copy-video-prompts");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
+    function renderCarousel() {
+      const box = document.getElementById("carousel-slides");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.carousel || !r.carousel.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成 Carousel」出 6 張 slide 文字內容（封面 + 內容 + CTA）。</p>';
+        return;
+      }
+      box.innerHTML = r.carousel.map((s, i) =>
+        `<div class="carousel-slide" data-i="${i}">
+          <div class="slide-type">Slide ${i + 1}：${escapeHtml(s.slideType || "content")} <button type="button" class="slide-del" style="float:right">✕</button></div>
+          <input class="cs-title" placeholder="標題" value="${escapeHtml(s.title || "")}">
+          <textarea class="cs-body" placeholder="內文">${escapeHtml(s.body || "")}</textarea>
+          <input class="cs-cta" placeholder="CTA（CTA slide 先填）" value="${escapeHtml(s.cta || "")}">
+        </div>`
+      ).join("");
+      box.querySelectorAll(".slide-del").forEach((b) => {
+        b.addEventListener("click", () => {
+          const r2 = activeReel(); if (!r2) return;
+          const card = b.closest(".carousel-slide");
+          const i = Number(card.dataset.i);
+          r2.carousel.splice(i, 1);
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderPlan();
+        });
+      });
+    }
+
+    function confirmCarousel() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.carousel || !r.carousel.length) { alert("先生成 Carousel。"); return; }
+      const box = document.getElementById("carousel-slides");
+      if (box) {
+        box.querySelectorAll(".carousel-slide").forEach((card) => {
+          const i = Number(card.dataset.i);
+          if (r.carousel[i]) {
+            r.carousel[i].title = card.querySelector(".cs-title").value;
+            r.carousel[i].body = card.querySelector(".cs-body").value;
+            r.carousel[i].cta = card.querySelector(".cs-cta").value;
+          }
+        });
+      }
+      r.carouselConfirmedAt = new Date().toISOString();
+      r.updatedAt = r.carouselConfirmedAt;
+      saveReels(state);
+      renderPlan();
+    }
+
+    function renderImagePrompts() {
+      const box = document.getElementById("image-prompt-list");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.imagePrompts || !r.imagePrompts.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成圖片 prompt」根據每張 carousel slide 出圖片生成 prompt。</p>';
+        return;
+      }
+      const carousel = r.carousel || [];
+      box.innerHTML = r.imagePrompts.map((p, i) =>
+        `<div class="video-prompt-block" data-i="${i}">
+          <div class="video-prompt-meta">Slide ${p.slideIndex + 1}：${escapeHtml((carousel[p.slideIndex] && carousel[p.slideIndex].title) || "")}</div>
+          <label>圖片 prompt（可編輯）</label>
+          <textarea class="ip-prompt">${escapeHtml(p.prompt || "")}</textarea>
+        </div>`
+      ).join("");
+    }
+
+    function confirmImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.imagePrompts || !r.imagePrompts.length) { alert("先生成圖片 prompt。"); return; }
+      const box = document.getElementById("image-prompt-list");
+      if (box) {
+        box.querySelectorAll(".video-prompt-block").forEach((blk) => {
+          const i = Number(blk.dataset.i);
+          if (r.imagePrompts[i]) r.imagePrompts[i].prompt = blk.querySelector(".ip-prompt").value;
+        });
+      }
+      r.imagePromptAt = new Date().toISOString();
+      r.updatedAt = r.imagePromptAt;
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.imagePrompts || !r.imagePrompts.length) { alert("圖片 prompt 係空，無嘢可複製。"); return; }
+      const text = `【Carousel 圖片生成 prompt — ${r.title || ""}】\n\n` +
+        r.imagePrompts.map((p) => `【Slide ${p.slideIndex + 1}】\n${p.prompt || ""}`).join("\n\n");
+      const btn = document.getElementById("copy-image-prompts");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function canAdvanceToStep1(r) {
       return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
     }
@@ -1303,10 +1726,22 @@
       return !!r.aiGeneratedAt;
     }
 
+    function canAdvanceToStep4(r) {
+      return !!r.aiGeneratedAt;
+    }
+
+    function canAdvanceToStep5(r) {
+      return !!r.videoPromptAt;
+    }
+
+    function canAdvanceToStep6(r) {
+      return !!r.carouselConfirmedAt;
+    }
+
     function goWizardStep(n) {
       const r = activeReel();
       if (!r) return;
-      n = Math.max(0, Math.min(3, n));
+      n = Math.max(0, Math.min(6, n));
       r.wizardStep = n;
       r.updatedAt = new Date().toISOString();
       saveReels(state);
@@ -1338,7 +1773,7 @@
       const dot = (n) => `<span class="wizard-dot${step === n ? " active" : ""}" data-go="${n}">${n + 1}</span>`;
       panel.innerHTML = `
         <div class="wizard" data-step="${step}">
-          <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}</div>
+          <div class="wizard-dots">${dot(0)}${dot(1)}${dot(2)}${dot(3)}${dot(4)}${dot(5)}${dot(6)}</div>
           <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
             <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
@@ -1449,6 +1884,45 @@
               <div id="script-review"></div>
             </div>
           </div>
+          <div class="wizard-step" data-step-n="4">
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-video-prompts">${r.videoPrompts && r.videoPrompts.length ? "重新生成影片 prompt" : "AI 生成影片 prompt"}</button>
+              </div>
+              <div id="video-prompt-list"></div>
+              <div class="field"><label>Master prompt（整體風格，可一次過生成長片）</label><textarea id="video-master-prompt" rows="3">${escapeHtml(r.videoMasterPrompt || "")}</textarea></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-video-prompts">${r.videoPromptAt ? "已確認（重新確認）" : "確認影片 prompt"}</button>
+                <button type="button" id="copy-video-prompts" ${r.videoPromptAt ? "" : "disabled"}>複製影片 prompt</button>
+              </div>
+              <div class="field"><label>已生成影片素材連結/備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="貼去 Veo/Runway 生成後，記低素材連結或備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+            </div>
+          </div>
+          <div class="wizard-step" data-step-n="5">
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-carousel">${r.carousel && r.carousel.length ? "重新生成 Carousel" : "AI 生成 Carousel"}</button>
+                <button type="button" id="carousel-add">+ 加 slide</button>
+              </div>
+              <div id="carousel-slides"></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-carousel">${r.carouselConfirmedAt ? "已確認（重新確認）" : "確認 Carousel"}</button>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-step" data-step-n="6">
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-image-prompts">${r.imagePrompts && r.imagePrompts.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt"}</button>
+              </div>
+              <div id="image-prompt-list"></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-image-prompts">${r.imagePromptAt ? "已確認（重新確認）" : "確認圖片 prompt"}</button>
+                <button type="button" id="copy-image-prompts" ${r.imagePromptAt ? "" : "disabled"}>複製圖片 prompt</button>
+              </div>
+              <div class="field"><label>已生成圖片素材連結/備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="貼去 Midjourney/即夢生成後，記低素材連結或備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+            </div>
+          </div>
           <div class="wizard-nav">
             <button type="button" id="wiz-prev">← 上一步</button>
             <button type="button" id="wiz-skip">略過 AI →</button>
@@ -1551,7 +2025,7 @@
       const nextBtn = panel.querySelector("#wiz-next");
       const skipBtn = panel.querySelector("#wiz-skip");
       if (prevBtn) prevBtn.style.display = stepCur === 0 ? "none" : "inline-block";
-      if (nextBtn) nextBtn.style.display = stepCur === 3 ? "none" : "inline-block";
+      if (nextBtn) nextBtn.style.display = stepCur === 6 ? "none" : "inline-block";
       if (skipBtn) skipBtn.style.display = stepCur === 1 ? "inline-block" : "none";
       if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep ?? 0) - 1));
       if (skipBtn) skipBtn.addEventListener("click", () => goWizardStep(2));
@@ -1561,6 +2035,9 @@
         if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題、重點，同揀 Hook、CTA。"); return; }
         if (cur === 1 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
         if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先生成完整內容。"); return; }
+        if (cur === 3 && !canAdvanceToStep4(r2)) { alert("先生成完整內容再出影片 prompt。"); return; }
+        if (cur === 4 && !canAdvanceToStep5(r2)) { alert("先確認影片 prompt。"); return; }
+        if (cur === 5 && !canAdvanceToStep6(r2)) { alert("先確認 Carousel。"); return; }
         goWizardStep(cur + 1);
       });
       panel.querySelectorAll(".wizard-dot").forEach((d) => {
@@ -1571,6 +2048,9 @@
           if (target >= 1 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
           if (target >= 2 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
           if (target === 3 && !canAdvanceToStep3(r2) && !r2.aiGeneratedAt) { alert("先生成完整內容，或撳「略過 AI」直接手動編輯。"); return; }
+          if (target === 4 && !canAdvanceToStep4(r2)) { alert("先生成完整內容再出影片 prompt。"); return; }
+          if (target === 5 && !canAdvanceToStep5(r2)) { alert("先確認影片 prompt。"); return; }
+          if (target === 6 && !canAdvanceToStep6(r2)) { alert("先確認 Carousel。"); return; }
           goWizardStep(target);
         });
       });
@@ -1592,11 +2072,53 @@
       if (asmScrBtn) asmScrBtn.addEventListener("click", () => assembleScript(false));
       const cpyScrBtn = panel.querySelector("#copy-script");
       if (cpyScrBtn) cpyScrBtn.addEventListener("click", copyScript);
+      const genVideoBtn = panel.querySelector("#ai-gen-video-prompts");
+      if (genVideoBtn) genVideoBtn.addEventListener("click", regenerateVideoPrompts);
+      const confirmVideoBtn = panel.querySelector("#confirm-video-prompts");
+      if (confirmVideoBtn) confirmVideoBtn.addEventListener("click", confirmVideoPrompts);
+      const copyVideoBtn = panel.querySelector("#copy-video-prompts");
+      if (copyVideoBtn) copyVideoBtn.addEventListener("click", copyVideoPrompts);
+      const videoNoteEl = panel.querySelector("#video-asset-note");
+      if (videoNoteEl) videoNoteEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetNote = videoNoteEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const genCarouselBtn = panel.querySelector("#ai-gen-carousel");
+      if (genCarouselBtn) genCarouselBtn.addEventListener("click", regenerateCarousel);
+      const confirmCarouselBtn = panel.querySelector("#confirm-carousel");
+      if (confirmCarouselBtn) confirmCarouselBtn.addEventListener("click", confirmCarousel);
+      const carouselAddBtn = panel.querySelector("#carousel-add");
+      if (carouselAddBtn) carouselAddBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.carousel = r2.carousel || [];
+        r2.carousel.push({ slideType: "content", title: "", body: "", cta: "" });
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      });
+      const genImageBtn = panel.querySelector("#ai-gen-image-prompts");
+      if (genImageBtn) genImageBtn.addEventListener("click", regenerateImagePrompts);
+      const confirmImageBtn = panel.querySelector("#confirm-image-prompts");
+      if (confirmImageBtn) confirmImageBtn.addEventListener("click", confirmImagePrompts);
+      const copyImageBtn = panel.querySelector("#copy-image-prompts");
+      if (copyImageBtn) copyImageBtn.addEventListener("click", copyImagePrompts);
+      const imageNoteEl = panel.querySelector("#image-asset-note");
+      if (imageNoteEl) imageNoteEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetNote = imageNoteEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
       renderHookCandidates();
       renderCtaPicker();
       renderScriptReview();
       renderAiOptions();
       renderDirectionCandidates();
+      renderVideoPrompts();
+      renderCarousel();
+      renderImagePrompts();
     }
 
     function renderShootChecklist() {
@@ -1759,6 +2281,17 @@
       copy.interactionGoal = "";
       copy.scriptReview = null;
       copy.scriptReviewAt = null;
+      copy.videoPrompts = [];
+      copy.videoMasterPrompt = "";
+      copy.videoOverallStyle = "";
+      copy.videoPromptAt = null;
+      copy.videoAssetNote = "";
+      copy.carousel = [];
+      copy.carouselAt = null;
+      copy.carouselConfirmedAt = null;
+      copy.imagePrompts = [];
+      copy.imagePromptAt = null;
+      copy.imageAssetNote = "";
       state.reels.push(copy);
       state.activeReelId = copy.id;
       saveReels(state);
