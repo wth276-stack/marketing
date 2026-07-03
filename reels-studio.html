@@ -167,6 +167,29 @@
       save: ["save 低呢條，下次跟住做", "save 低下次睇返", "呢個框架遲啲用得返，save 先"],
       share: ["send 畀一個成日卡住嘅朋友", "轉畀你覺得會需要嘅人", "send 畀身邊都係咁嘅人"]
     };
+    const AUDIENCE = "30-55 歲女性（香港），關注逆齡、輪廓、膚質、色斑";
+    const BRAND_REFERENCE = [
+      "品牌：JESSI BEAUTY（尖沙咀「逆齡專家」）。目標客：30-55 歲女士，開始面對鬆弛、皺紋、膚質變差、色斑。",
+      "語氣：專業、高級、溫柔、可信、唔 hard sell；廣東話為主。客人怕動刀、怕誇張、怕被 sell，想自然、想有人專業分析。",
+      "差異化：逆齡係「階段性 / 綜合療程」——老化分層次（結構鬆弛 / 膚質底子 / 色素斑），唔靠一部機，要分層處理。",
+      "主賣 4 個逆齡療程（內容主推）：",
+      "  ① Focus Dual（RF 微針 + HIFU，提拉緊緻；單頭試做 $1,980 / 雙頭 $3,680）——針對結構鬆弛、輪廓、法令紋。",
+      "  ② Jessi Glow（Doctor Peel 煥膚；試做 $680/$980，原價 $1,980）——針對角質粗糙、暗啞、提亮。",
+      "  ③ Glaskin 玻璃肌（試做 $1,980）——亮澤水光、膚質底子。",
+      "  ④ Pico 三文治（Pico Extreme + 多步驟淡斑；試做 $980）——荷爾蒙斑、色斑、暗沉。",
+      "輔助療程（唔好當主賣 push）：RP 精華定制處方（Rxpert 指紋式定制）、Aqual Peel、HD 海藻矽針、無針破壁+外泌體等。",
+      "Claim-Safety（香港法規，必守）：唔好講「保證見效/永久/一次淡斑/即時拉提/醫治根治/無痛/瘦面減脂/取代手術」；改成「效果因人而異/有助改善/持續護理有助維持/舒適度因人而異」。",
+      "核心 Offer + CTA：主 CTA 係「30 分鐘免費皮膚分析」（儀器檢測+專人講解，可只分析唔買）。兩步式：內容共鳴→留言/DM 關鍵字→客服 send 3 條自測問題→免費分析→WhatsApp 預約。常見關鍵字：輪廓/膚質/斑/分析。",
+      "價錢/試做價留到後段（免費分析後、Week 3-4）先講，唔好一開波 sell 價。",
+      "AI 只可以用呢份資料嘅療程名、價錢、定位，唔准自己作療效、價錢、療程名。"
+    ].join("\n");
+    function refBlock(r) {
+      return [
+        "【品牌資料（必須跟，唔准作療程/價錢/療效）】",
+        BRAND_REFERENCE,
+        r.reference && r.reference.trim() ? "【用家補充參考資料】\n" + r.reference.trim() : ""
+      ].filter(Boolean).join("\n");
+    }
     const SCORE_KEYS = ["hook", "retention", "rhythm", "subtitle", "audio", "ctaClarity", "shareability"];
     const SCORE_LABELS = {
       hook: "頭 2 秒留人", retention: "整體留存", rhythm: "節奏密度",
@@ -218,7 +241,7 @@
         title: "",
         structure: "反差型",
         hook: "",
-        audience: "香港美容業有興趣嘅人",
+        audience: AUDIENCE,
         tone: "香港廣東話、自然、簡短",
         hookTypeSel: "全部",
         hookCandidates: [],
@@ -230,6 +253,7 @@
         scriptReview: null,
         scriptReviewAt: null,
         coreMessage: "",
+        reference: "",
         segments: [{ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" }],
         summary: "",
         cta: "",
@@ -299,6 +323,8 @@
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
         if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
+        merged.audience = AUDIENCE;
+        if (typeof merged.reference !== "string") merged.reference = "";
         if (!Array.isArray(merged.directionCandidates)) merged.directionCandidates = [];
         if (typeof merged.contentDirection !== "string") merged.contentDirection = "";
         if (merged.contentDirectionAt === undefined) merged.contentDirectionAt = null;
@@ -484,6 +510,7 @@
         "重點：" + r.coreMessage,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
+        refBlock(r),
         "",
         "可套用嘅 Hook 公式（自選最啱嘅，formula 欄寫返用咗邊條）：",
         HOOK_FORMULAS.map((f, i) => (i + 1) + ". " + f).join("\n"),
@@ -625,6 +652,7 @@
         "CTA：" + r.cta,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
+        refBlock(r),
         "已揀結構：" + (p.structure || "（未揀）"),
         "已揀內容角度：" + (p.angle || "（未揀）"),
         "已揀片長：" + (p.lengthSec != null ? p.lengthSec + "秒" : "（未揀）"),
@@ -718,6 +746,7 @@
         "重點：" + r.coreMessage,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
+        refBlock(r),
         "已揀結構：" + (p.structure || "（未揀）"),
         "已揀內容角度：" + (p.angle || "（未揀）"),
         "",
@@ -806,6 +835,7 @@
         "CTA：" + r.cta,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
+        refBlock(r),
         "已揀結構：" + (p.structure || "（未揀，由你按主題判斷）"),
         "已揀內容角度：" + (p.angle || "（未揀，由你按主題判斷）"),
         "已揀片長：" + (p.lengthSec != null ? p.lengthSec + "秒" : "（未揀，由你按主題判斷）"),
@@ -902,6 +932,7 @@
         "主題：" + r.title,
         "受眾：" + r.audience,
         "語氣：" + r.tone,
+        refBlock(r),
         "你揀嘅互動目標：" + (r.interactionGoal || "（未定）"),
         "",
         "現有逐鏡：",
@@ -1131,8 +1162,8 @@
           <div class="wizard-step" data-step-n="0">
             <div class="field"><label>Reel 主題</label><input id="p-title" value="${escapeHtml(r.title)}"></div>
             <div class="field"><label>一條片一個重點</label><textarea id="p-core" rows="2">${escapeHtml(r.coreMessage)}</textarea></div>
-            <details id="advanced-fields"><summary>進階（受眾 / 語氣）</summary>
-              <div class="field"><label>目標受眾</label><input id="p-audience" value="${escapeHtml(r.audience)}"></div>
+            <div class="field"><label>參考資料（選填，例如療程重點 / 價目 / 賣點）</label><textarea id="p-reference" rows="3" placeholder="可貼療程資料、價目、賣點；留空會用內置品牌資料。唔好輸入客人個人資料。">${escapeHtml(r.reference)}</textarea></div>
+            <details id="advanced-fields"><summary>進階（語氣）</summary>
               <div class="field"><label>語氣</label><input id="p-tone" value="${escapeHtml(r.tone)}"></div>
             </details>
             <div class="field"><label>Hook 版型</label>
@@ -1244,7 +1275,7 @@
         });
       };
       bind("#p-title", "title");
-      bind("#p-audience", "audience");
+      bind("#p-reference", "reference");
       bind("#p-tone", "tone");
       bind("#p-hook", "hook");
       bind("#p-core", "coreMessage");
@@ -1546,6 +1577,8 @@
       return [
         "【Reels 拍片 brief — Jessi Beauty】",
         "主題：" + (r.title || "（待填）"),
+        "品牌：Jessi Beauty（尖沙咀逆齡專家，30-55 歲女士）",
+        "參考資料：" + (r.reference || "（無）"),
         "結構：" + (r.structure || "（待選）"),
         "頭 1–2 秒鉤子：" + (r.hook || "（待填）"),
         "一條片一個重點：" + (r.coreMessage || "（待填）"),

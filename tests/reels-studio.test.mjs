@@ -216,7 +216,8 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v17", async () => {
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
   const html = await readHtml();
-  assert.match(html, /audience:\s*"香港美容業有興趣嘅人"/);
+  assert.match(html, /const AUDIENCE = "30-55 歲女性（香港），關注逆齡、輪廓、膚質、色斑"/);
+  assert.match(html, /audience:\s*AUDIENCE/);
   assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
   assert.match(html, /hookCandidates:\s*\[\]/);
   assert.match(html, /function generateAiHooks\(/);
@@ -227,7 +228,7 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /addEventListener\("click", regenerateHooks\)/);
   assert.match(html, /id="ai-generate-hooks"/);
   assert.match(html, /id="hook-candidates"/);
-  assert.match(html, /id="p-audience"/);
+  assert.doesNotMatch(html, /id="p-audience"/);
   assert.match(html, /id="p-tone"/);
   assert.match(html, /fitGoal:\s*\{\s*type:\s*"string"\s*\}/);
   assert.match(html, /risk:\s*\{\s*type:\s*"string"\s*\}/);
@@ -252,6 +253,13 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /公式/);
   assert.match(html, /copy\.hookCandidates = \[\]/);
   assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+  assert.match(html, /const BRAND_REFERENCE = /);
+  assert.match(html, /function refBlock\(/);
+  assert.match(html, /reference:\s*""/);
+  assert.match(html, /id="p-reference"/);
+  assert.match(html, /參考資料（選填/);
+  assert.match(html, /品牌資料（必須跟/);
+  assert.match(html, /refBlock\(r\)/);
 });
 
 test("reels-studio CTA picker + interactionGoal 用家明揀", async () => {
