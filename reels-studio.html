@@ -244,6 +244,7 @@
         audience: AUDIENCE,
         tone: "香港廣東話、自然、簡短",
         hookTypeSel: "全部",
+        hookFormulaSel: "AI 自動揀",
         hookCandidates: [],
         hookCandidatesAt: null,
         interactionGoal: "",
@@ -323,6 +324,7 @@
         if (!Array.isArray(merged.hashtags)) merged.hashtags = [];
         if (!Array.isArray(merged.hookCandidates)) merged.hookCandidates = [];
         if (typeof merged.interactionGoal !== "string") merged.interactionGoal = "";
+        if (typeof merged.hookFormulaSel !== "string") merged.hookFormulaSel = "AI 自動揀";
         merged.audience = AUDIENCE;
         if (typeof merged.reference !== "string") merged.reference = "";
         if (!Array.isArray(merged.directionCandidates)) merged.directionCandidates = [];
@@ -500,9 +502,13 @@
 
     function hookPrompt(r) {
       const typeSel = r.hookTypeSel || "全部";
+      const formulaSel = r.hookFormulaSel || "AI 自動揀";
       const typeLine = typeSel === "全部"
         ? "出 10 個 hook，每個版型（痛點版/反差版/結果版/好奇版/錯誤版/清單版/問題版/否定常識版/身份認同版/直接命令版）各 1 個。"
         : "出 5 個 hook，全部係「" + typeSel + "」版型，用唔同公式角度。";
+      const formulaLine = formulaSel === "AI 自動揀"
+        ? "可套用嘅 Hook 公式（自選最啱嘅，formula 欄寫返用咗邊條）：\n" + HOOK_FORMULAS.map((f, i) => (i + 1) + ". " + f).join("\n")
+        : "全部 hook 必須用呢條公式（逐字套用）：「" + formulaSel + "」，formula 欄填返呢條。";
       return [
         "你是香港美容業 IG Reels hook 策劃。根據以下輸入，出 hook 候選。繁體中文、廣東話自然語氣。",
         "輸入：",
@@ -512,8 +518,7 @@
         "語氣：" + r.tone,
         refBlock(r),
         "",
-        "可套用嘅 Hook 公式（自選最啱嘅，formula 欄寫返用咗邊條）：",
-        HOOK_FORMULAS.map((f, i) => (i + 1) + ". " + f).join("\n"),
+        formulaLine,
         "",
         typeLine,
         "準則：hook 令觀眾心入面答一句「係喎」或「點解嘅？」就留到人。",
@@ -527,6 +532,8 @@
       if (!r.title.trim()) { alert("請先填主題。"); return; }
       const sel = document.getElementById("hook-type-select");
       if (sel) r.hookTypeSel = sel.value;
+      const fSel = document.getElementById("hook-formula-select");
+      if (fSel) r.hookFormulaSel = fSel.value;
       const btn = document.getElementById("ai-generate-hooks");
       if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
       try {
@@ -1172,6 +1179,12 @@
                 ${HOOK_TYPES.map((t) => `<option value="${escapeHtml(t)}"${(r.hookTypeSel || "全部") === t ? " selected" : ""}>${escapeHtml(t)}</option>`).join("")}
               </select>
             </div>
+            <div class="field"><label>Hook 公式</label>
+              <select id="hook-formula-select">
+                <option value="AI 自動揀"${(r.hookFormulaSel || "AI 自動揀") === "AI 自動揀" ? " selected" : ""}>AI 自動揀</option>
+                ${HOOK_FORMULAS.map((f) => `<option value="${escapeHtml(f)}"${(r.hookFormulaSel || "AI 自動揀") === f ? " selected" : ""}>${escapeHtml(f)}</option>`).join("")}
+              </select>
+            </div>
             <div class="ai-block">
               <div class="toolbar">
                 <button type="button" id="ai-generate-hooks">${r.hookCandidates && r.hookCandidates.length ? "重新生成 Hook" : "AI 生成 Hook"}</button>
@@ -1288,6 +1301,12 @@
       const hookTypeSelEl = panel.querySelector("#hook-type-select");
       if (hookTypeSelEl) hookTypeSelEl.addEventListener("change", () => {
         r.hookTypeSel = hookTypeSelEl.value;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const hookFormulaSelEl = panel.querySelector("#hook-formula-select");
+      if (hookFormulaSelEl) hookFormulaSelEl.addEventListener("change", () => {
+        r.hookFormulaSel = hookFormulaSelEl.value;
         r.updatedAt = new Date().toISOString();
         saveReels(state);
       });

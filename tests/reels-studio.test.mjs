@@ -260,6 +260,10 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /參考資料（選填/);
   assert.match(html, /品牌資料（必須跟/);
   assert.match(html, /refBlock\(r\)/);
+  assert.match(html, /hookFormulaSel:\s*"AI 自動揀"/);
+  assert.match(html, /id="hook-formula-select"/);
+  assert.match(html, /AI 自動揀/);
+  assert.match(html, /必須用呢條公式（逐字套用）/);
 });
 
 test("reels-studio CTA picker + interactionGoal 用家明揀", async () => {
