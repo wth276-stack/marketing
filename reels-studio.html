@@ -152,6 +152,7 @@
     const STRUCTURES = ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型", "對比型", "步驟型"];
     const ANGLES = ["前後對比", "常見錯誤", "秘密技巧", "迷思破解", "步驟拆解", "過來人經驗", "反直覺真相", "清單盤點"];
     const LENGTH_SECONDS = [15, 25, 30, 45, 60, 90, 120];
+    const SUBTITLE_STYLES = ["大字重點", "逐句跟讀", "標題＋關鍵字", "純VO無字幕", "KV字卡"];
     const HOOK_TYPES = ["痛點版", "反差版", "結果版", "好奇版", "錯誤版", "清單版", "問題版", "否定常識版", "身份認同版", "直接命令版"];
     const HOOK_FORMULAS = [
       "你以為＿＿，其實＿＿。",
@@ -333,6 +334,9 @@
         if (merged.scriptReview !== null && typeof merged.scriptReview !== "object") merged.scriptReview = null;
         if (!merged.aiPicks || typeof merged.aiPicks !== "object") merged.aiPicks = {};
         const ap = merged.aiPicks;
+        if (ap.subtitleStyle && typeof ap.subtitleStyle === "object") {
+          ap.subtitleStyle = ap.subtitleStyle.subtitleStyle || null;
+        }
         if (ap.structureAngle && !ap.structure) {
           ap.structure = ap.structureAngle?.structure || null;
           ap.angle = ap.structureAngle?.angle || null;
@@ -473,7 +477,6 @@
     }
 
     const AI_GROUP_ARRAY = {
-      subtitleStyle: "subtitleStyles",
       ctaStyle: "ctaStyles",
       broll: "brollSets"
     };
@@ -641,17 +644,16 @@
     const STAGE_A_SCHEMA = {
       type: "object",
       properties: {
-        subtitleStyles: { type: "array", items: { type: "object", properties: { subtitleStyle: { type: "string" }, reason: { type: "string" } }, required: ["subtitleStyle", "reason"] } },
         ctaStyles: { type: "array", items: { type: "object", properties: { style: { type: "string" }, exampleRead: { type: "string" }, reason: { type: "string" } }, required: ["style", "exampleRead", "reason"] } },
         brollSets: { type: "array", items: { type: "object", properties: { shots: { type: "array", items: { type: "string" } }, reason: { type: "string" } }, required: ["shots", "reason"] } }
       },
-      required: ["subtitleStyles", "ctaStyles", "brollSets"]
+      required: ["ctaStyles", "brollSets"]
     };
 
     function stageAPrompt(r) {
       const p = r.aiPicks || {};
       return [
-        "你是香港美容業 IG Reels 編導。用家已揀好結構、角度、片長，你根據佢哋同主題，為剩低三個維度各出 2 至 3 個候選，每項附一句簡短 reason。繁體中文。",
+        "你是香港美容業 IG Reels 編導。用家已揀好結構、角度、片長、字幕風格，你根據佢哋同主題，為剩低兩個維度（CTA 呈現、B-roll）各出 2 至 3 個候選，每項附一句簡短 reason。繁體中文。",
         "輸入：",
         "主題：" + r.title,
         "鉤子：" + r.hook,
@@ -663,8 +665,9 @@
         "已揀結構：" + (p.structure || "（未揀）"),
         "已揀內容角度：" + (p.angle || "（未揀）"),
         "已揀片長：" + (p.lengthSec != null ? p.lengthSec + "秒" : "（未揀）"),
+        "已揀字幕風格：" + (p.subtitleStyle || "（未揀）"),
         "",
-        "輸出 JSON：subtitleStyles（字幕風格 subtitleStyle + reason）、ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead + reason）、brollSets（B-roll 鏡頭清單 shots + reason）。每組 2–3 個，配合上面已揀嘅結構/角度/片長。嚴格跟 JSON schema。"
+        "輸出 JSON：ctaStyles（CTA 呈現方式 style + 示範讀法 exampleRead + reason）、brollSets（B-roll 鏡頭清單 shots + reason）。每組 2–3 個，配合上面已揀嘅結構/角度/片長/字幕風格。嚴格跟 JSON schema。"
       ].join("\n");
     }
 
@@ -677,7 +680,7 @@
       try {
         const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA);
         r.aiOptions = data;
-        r.aiPicks = { structure: r.aiPicks?.structure || null, angle: r.aiPicks?.angle || null, lengthSec: r.aiPicks?.lengthSec ?? null, subtitleStyle: null, ctaStyle: null, broll: null };
+        r.aiPicks = { structure: r.aiPicks?.structure || null, angle: r.aiPicks?.angle || null, lengthSec: r.aiPicks?.lengthSec ?? null, subtitleStyle: r.aiPicks?.subtitleStyle ?? null, ctaStyle: null, broll: null };
         r.updatedAt = new Date().toISOString();
         saveReels(state);
         renderPlan();
@@ -693,7 +696,7 @@
       if (!box) return;
       const r = activeReel();
       if (!r || !r.aiOptions) {
-        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">揀好結構、角度、片長，撳「AI 生成選項」由 AI 出字幕風格 / CTA呈現 / B-roll 俾你揀。</p>';
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">揀好結構、角度、片長、字幕風格，撳「AI 生成選項」由 AI 出 CTA 呈現 / B-roll 俾你揀。</p>';
         return;
       }
       const o = r.aiOptions;
@@ -705,7 +708,6 @@
           return `<div class="ai-pick-card${sel ? " selected" : ""}" data-group="${key}" data-i="${i}">${card(item)}</div>`;
         }).join("") + `</div>`;
       const html =
-        group("字幕風格", o.subtitleStyles, "subtitleStyle", (x) => `<strong>${escapeHtml(x.subtitleStyle)}</strong><div class="reason">${escapeHtml(x.reason)}</div>`) +
         group("CTA 呈現方式", o.ctaStyles, "ctaStyle", (x) => `<strong>${escapeHtml(x.style)}</strong> — 「${escapeHtml(x.exampleRead)}」<div class="reason">${escapeHtml(x.reason)}</div>`) +
         group("B-roll 拍攝元素", o.brollSets, "broll", (x) => `<strong>${(x.shots || []).map(escapeHtml).join("、")}</strong><div class="reason">${escapeHtml(x.reason)}</div>`);
       box.innerHTML = html;
@@ -846,7 +848,7 @@
         "已揀結構：" + (p.structure || "（未揀，由你按主題判斷）"),
         "已揀內容角度：" + (p.angle || "（未揀，由你按主題判斷）"),
         "已揀片長：" + (p.lengthSec != null ? p.lengthSec + "秒" : "（未揀，由你按主題判斷）"),
-        "已揀字幕風格：" + fmt(p.subtitleStyle),
+        "已揀字幕風格：" + (p.subtitleStyle || "（未揀，由你按主題判斷）"),
         "已揀 CTA 呈現：" + fmt(p.ctaStyle),
         "已揀 B-roll：" + fmt(p.broll),
         "",
@@ -1220,6 +1222,12 @@
                 ${LENGTH_SECONDS.map((n) => `<option value="${n}"${(r.aiPicks?.lengthSec) === n ? " selected" : ""}>${n}</option>`).join("")}
               </select>
             </div>
+            <div class="field"><label>字幕風格</label>
+              <select id="pick-subtitle-style">
+                <option value=""${!r.aiPicks?.subtitleStyle ? " selected" : ""}>（未揀）</option>
+                ${SUBTITLE_STYLES.map((s) => `<option value="${escapeHtml(s)}"${r.aiPicks?.subtitleStyle === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
+              </select>
+            </div>
             <div class="ai-block">
               <div class="toolbar">
                 <button type="button" id="ai-generate-options">${r.aiOptions ? "重新生成選項" : "AI 生成選項"}</button>
@@ -1332,6 +1340,13 @@
         r.updatedAt = new Date().toISOString();
         saveReels(state);
       });
+      const pickSubtitle = panel.querySelector("#pick-subtitle-style");
+      if (pickSubtitle) pickSubtitle.addEventListener("change", () => {
+        r.aiPicks = r.aiPicks || {};
+        r.aiPicks.subtitleStyle = pickSubtitle.value || null;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
 
       panel.querySelectorAll(".seg-row").forEach((row) => {
         const i = Number(row.dataset.i);
@@ -1373,7 +1388,7 @@
         const r2 = activeReel(); if (!r2) return;
         const cur = r2.wizardStep ?? 0;
         if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題、重點，同揀 Hook、CTA。"); return; }
-        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長，同生成選項。"); return; }
+        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
         if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先生成完整內容。"); return; }
         goWizardStep(cur + 1);
       });
@@ -1383,7 +1398,7 @@
           const target = Number(d.dataset.go);
           if (target === (r2.wizardStep ?? 0)) return;
           if (target >= 1 && !canAdvanceToStep1(r2)) { alert("請先填主題同揀／寫鉤子。"); return; }
-          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長，同生成選項。"); return; }
+          if (target >= 2 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
           if (target === 3 && !canAdvanceToStep3(r2) && !r2.aiGeneratedAt) { alert("先生成完整內容，或撳「略過 AI」直接手動編輯。"); return; }
           goWizardStep(target);
         });

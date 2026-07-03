@@ -145,10 +145,10 @@ test("reels-studio declares full-caption assemble + copy", async () => {
   assert.match(html, /<textarea[^>]*id="p-caption"[^>]*>\$\{escapeHtml\(r\.caption\)\}<\/textarea>/);
 });
 
-test("reels-studio Stage B asks full caption + SW bumped to v17", async () => {
+test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v17/);
+  assert.match(sw, /jessi-workflow-cache-v18/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -164,10 +164,10 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
   assert.match(html, /function assembleScript\(\s*force\s*=\s*false\s*\)/);
 });
 
-test("reels-studio Stage B auto-assembles script + SW bumped to v17", async () => {
+test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v17/);
+  assert.match(sw, /jessi-workflow-cache-v18/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -196,10 +196,10 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
   assert.match(html, /id="ai-generate-content"/);
 });
 
-test("reels-studio regenerate wrappers + dynamic labels + SW v17", async () => {
+test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v17/);
+  assert.match(sw, /jessi-workflow-cache-v18/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -344,10 +344,10 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /copy\.scriptReview = null/);
 });
 
-test("reels-studio v3 migration + inferWizardStep + SW v17", async () => {
+test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v17/);
+  assert.match(sw, /jessi-workflow-cache-v18/);
   assert.match(html, /const REEL_SCHEMA_VERSION = 3/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function inferWizardStep\(/);
@@ -375,8 +375,13 @@ test("reels-studio Stage A 拆分 + 方向建議 + aiPicks 6 格", async () => {
   assert.match(html, /r\.contentDirection = candidate\.label/);
   assert.match(html, /重新生成方向/);
   assert.match(html, /生成方向建議/);
-  assert.match(html, /subtitleStyles/);
+  assert.doesNotMatch(html, /subtitleStyles/);
   assert.match(html, /先揀結構同角度/);
+  assert.match(html, /const SUBTITLE_STYLES = \[/);
+  assert.match(html, /id="pick-subtitle-style"/);
+  for (const s of ["大字重點", "逐句跟讀", "標題＋關鍵字", "純VO無字幕", "KV字卡"]) {
+    assert.match(html, new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `missing subtitle style ${s}`);
+  }
 });
 
 test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
