@@ -148,7 +148,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -167,7 +167,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -194,12 +194,18 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
   assert.match(html, /copy\.wizardStep = 0/);
   assert.match(html, /id="ai-generate-options"/);
   assert.match(html, /id="ai-generate-content"/);
+  assert.match(html, /data-step-n="4"/);
+  assert.match(html, /data-step-n="5"/);
+  assert.match(html, /data-step-n="6"/);
+  assert.match(html, /function canAdvanceToStep4\(/);
+  assert.match(html, /function canAdvanceToStep5\(/);
+  assert.match(html, /function canAdvanceToStep6\(/);
 });
 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -344,12 +350,13 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /copy\.scriptReview = null/);
 });
 
-test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
+test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
-  assert.match(html, /const REEL_SCHEMA_VERSION = 3/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(html, /const REEL_SCHEMA_VERSION = 4/);
   assert.match(html, /function migrateReelToV3\(/);
+  assert.match(html, /function migrateReelToV4\(/);
   assert.match(html, /function inferWizardStep\(/);
   assert.match(html, /reelsSchemaVersion/);
   assert.match(html, /r\.wizardStep - 1/);
@@ -358,6 +365,12 @@ test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
   assert.match(html, /directionCandidates:\s*\[\]/);
   assert.match(html, /contentDirection:\s*""/);
   assert.match(html, /contentDirectionAt:\s*null/);
+  assert.match(html, /videoPrompts:\s*\[\]/);
+  assert.match(html, /carousel:\s*\[\]/);
+  assert.match(html, /imagePrompts:\s*\[\]/);
+  assert.match(html, /videoPromptAt:\s*null/);
+  assert.match(html, /carouselConfirmedAt:\s*null/);
+  assert.match(html, /imagePromptAt:\s*null/);
 });
 
 test("reels-studio Stage A 拆分 + 方向建議 + aiPicks 6 格", async () => {
@@ -396,7 +409,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v19/);
+  assert.match(sw, /jessi-workflow-cache-v20/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -441,4 +454,15 @@ test("reels-studio Idea 批量生成 — UI panel + render", async () => {
   assert.match(html, /addEventListener\("click", generateAiIdeas\)/);
   assert.match(html, /addEventListener\("click", createReelsFromDrafts\)/);
   assert.match(html, /已揀 /);
+});
+
+test("reels-studio v4 migrate wraps v3 + goWizardStep clamps 0-6", async () => {
+  const html = await readHtml();
+  assert.match(html, /function migrateReelToV4\(r\) \{\s*const out = migrateReelToV3\(r\);/);
+  assert.match(html, /if \(!Array\.isArray\(out\.videoPrompts\)\) out\.videoPrompts = \[\];/);
+  assert.match(html, /if \(typeof out\.videoMasterPrompt !== "string"\) out\.videoMasterPrompt = "";/);
+  assert.match(html, /if \(out\.carouselConfirmedAt === undefined\) out\.carouselConfirmedAt = null;/);
+  assert.match(html, /if \(state\.reelsSchemaVersion < 4\) \{/);
+  assert.match(html, /state\.reels = state\.reels\.map\(\(r\) => migrateReelToV4\(r\)\);/);
+  assert.match(html, /n = Math\.max\(0, Math\.min\(6, n\)\);/);
 });
