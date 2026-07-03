@@ -387,6 +387,7 @@
         return merged;
       });
       if (!Array.isArray(state.ideaDrafts)) state.ideaDrafts = [];
+      if (!state.ideaBatchSchemaVersion) state.ideaBatchSchemaVersion = 1;
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
         state.activeReelId = state.reels[0]?.id || null;
       }

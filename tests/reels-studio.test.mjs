@@ -399,6 +399,7 @@ test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () =>
   assert.match(sw, /jessi-workflow-cache-v19/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
+  assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
   // schema
   assert.match(html, /const IDEA_BATCH_SCHEMA = \{/);
   assert.match(html, /ideas:\s*\{\s*type:\s*"array"/);
