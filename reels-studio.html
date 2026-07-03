@@ -1196,6 +1196,7 @@
       return [
         "你是香港美容業 IG Carousel 圖片生成 prompt 編導。根據以下每張 slide 嘅內容，各出一條可餵去 Midjourney / 即夢 / Imagen 嘅圖片生成 prompt。英文為主，關鍵詞風格。",
         "主題：" + r.title,
+        "受眾：" + AUDIENCE,
         refBlock(r),
         "",
         "Carousel slide 內容：",
@@ -1235,6 +1236,7 @@
         "重點：" + r.coreMessage,
         "已揀結構：" + (p.structure || "（未揀）"),
         "已揀 B-roll：" + (p.broll ? JSON.stringify(p.broll) : "（未揀）"),
+        "受眾：" + AUDIENCE,
         refBlock(r),
         "",
         "逐鏡結構：",

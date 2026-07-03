@@ -492,6 +492,7 @@ test("reels-studio Step 4 影片素材生成 prompt", async () => {
   assert.match(html, /r\.videoPromptAt = new Date\(\)\.toISOString\(\)/);
   assert.match(html, /重新生成會拎走現有影片 prompt/);
   assert.match(html, /refBlock\(r\)/);
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
   assert.match(html, /Veo \/ Runway \/ Sora/);
   assert.match(html, /canAdvanceToStep5\(r\)\s*\{\s*return !!r\.videoPromptAt;/);
 });
@@ -539,6 +540,7 @@ test("reels-studio Step 6 圖片生成 prompt", async () => {
   assert.match(html, /r\.imagePrompts = \(Array\.isArray\(data\.prompts\)/);
   assert.match(html, /r\.imagePromptAt = new Date\(\)\.toISOString\(\)/);
   assert.match(html, /重新生成會拎走現有圖片 prompt/);
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
   assert.match(html, /美容沙龍/);
   assert.match(html, /#c96b8a/);
   assert.match(html, /自然光/);
