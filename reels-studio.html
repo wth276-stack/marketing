@@ -1210,7 +1210,7 @@
 
     function carouselPrompt(r) {
       return [
-        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容。繁體中文、廣東話自然。",
+        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容，目標係用家可以直接貼落 IG 出到街、唔使再大執。繁體中文、廣東話自然。",
         "主題：" + r.title,
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
@@ -1220,8 +1220,12 @@
         "受眾：" + AUDIENCE,
         refBlock(r),
         "",
-        "6 張 slide 結構：slide 1 係 cover（slideType=\"cover\"，hook + 大標，引人停低）；slide 2-5 係 content（slideType=\"content\"，每張一個重點點列，承接主題）；slide 6 係 cta（slideType=\"cta\"，CTA slide，呼應互動目標）。",
-        "每張含 title、body、cta（cta slide 先填 cta，其餘可空字串）。嚴格跟 JSON schema。唔好亂作療程價錢。"
+        "6 張 slide 結構同邏輯遞進（每張要有明確角色，唔好重複或各打各）：",
+        "slide 1 cover（slideType=\"cover\"）：hook 標題——用數字／反差／提問制造好奇心（例如「3 個你以為啱但原來錯嘅護膚習慣」），配一句副標點出主題。要令人停低掃落去。",
+        "slide 2-5 content（slideType=\"content\"）：每張一個獨立重點，要有遞進邏輯（例如：痛點 → 知識／解法 → 點做 → 好處）。title 係短而有力嘅重點句；body 係 2-4 行可出品文案，要有具體內容（數字、具體好處、具體動作、具體例子），唔好空泛口號或佔位符。用點列或短句方便 IG 閱讀。",
+        "slide 6 cta（slideType=\"cta\"）：明確行動呼籲——具體叫做乜（留言「X」攞資訊／save 留遲啲睇／DM 預約／follow），呼應互動目標。唔好淨係「了解更多」呢類空泛 CTA。",
+        "每張含 title、body、cta 欄位（cta slide 先填 cta 字串，其餘 cta 可空字串）。",
+        "嚴格跟 JSON schema。唔好亂作療程價錢、效果保證、醫療聲稱。內容要真實可信、對應返品牌資料。"
       ].join("\n");
     }
 
@@ -1231,7 +1235,7 @@
         .map((s, i) => `鏡${i + 1}（${s.durationSec || "?"}秒）：${s.label || ""} | 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}`)
         .join("\n");
       return [
-        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可餵去 Veo / Runway / Sora 嘅影片生成 prompt。繁體中文 + 英文關鍵詞夾雜可。",
+        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可直接餵去 Veo / Runway / Sora 嘅影片生成 prompt。目標係用家拎去生成、剪埋一齊就出到街，唔使再執畫面。",
         "主題：" + r.title,
         "重點：" + r.coreMessage,
         "已揀結構：" + (p.structure || "（未揀）"),
@@ -1242,9 +1246,20 @@
         "逐鏡結構：",
         segs || "（無逐鏡資料，請按主題出 4-6 鏡）",
         "",
-        "每鏡 prompt 要包含：visualPrompt（畫面內容、人物動作、場景）、camera（鏡頭運動：特寫/中景/平移/推進等）、lighting（光線：自然光/柔光箱/逆光等）、durationSec（秒數）、label（鏡頭名）、segIndex（由 0 開始）。",
-        "再出一條 masterPrompt（整體風格 + 連貫元素，可一次過生成長片用）+ overallStyle（一句整體視覺風格描述）。",
-        "品牌質感：美容沙龍、香港女性、自然、唔過度打燈。嚴格跟 JSON schema。"
+        "【跨鏡一致性 — 最重要】全部鏡頭必須保持：同一個女主角（30-55 歲香港女性、自然妝容、唔濃妝、乾淨造型）、同一個美容沙龍場景（乾淨、木色／白色調、品牌色 #c96b8a 點綴）、統一色調（柔和自然光、暖白平衡、輕微 film grain）、統一服裝。呢啲連貫元素寫喺 masterPrompt 同 overallStyle，每鏡 visualPrompt 都要呼應。",
+        "",
+        "每鏡 prompt 欄位要求：",
+        "- visualPrompt：用英文寫一條完整 scene description（唔好淨係散關鍵詞），要包含：人物（年齡／性別／造型／情緒）、具體動作（例如 'applying serum to cheek with gentle fingertips'）、場景（'clean beauty salon, white counter, large mirror'）、道具（serum bottle, towel, green plant）、留位畀 IG overlay text（唔好生成中文字）。要具體到 AI 一睇就生成到正確畫面。",
+        "- camera：用業界英文關鍵詞，例如 close-up / medium shot / over-the-shoulder / slow push-in / static lockoff / pan / tracking shot / top-down。唔好用「特寫」呢類中文泛詞。",
+        "- lighting：用具體英文，例如 soft natural window light / softbox key light / gentle backlight / diffused daylight。避開硬光同過度打燈。",
+        "- durationSec：配合 reel 節奏（hook 鏡 2-3 秒、content 鏡 3-5 秒），整數。",
+        "- label：中文鏡頭名（例如「開場特寫」）。",
+        "- segIndex：由 0 開始整數。",
+        "",
+        "masterPrompt：一條完整可一次過餵去生成工具嘅英文長 prompt，包含全部連貫元素（女主角造型、場景、色調、brand color #c96b8a、film style、mood、avoid 項目例如 'avoid cartoonish, avoid overexposed, avoid text artifacts, avoid heavy makeup'）。用家可以直接用呢條生成長片。",
+        "overallStyle：一句英文描述整體視覺風格（例如 'Soft natural-light beauty salon footage, warm white balance, 30-55 Hong Kong woman with natural makeup, #c96b8a brand accent, calm premium aesthetic, subtle film grain'）。",
+        "",
+        "嚴格跟 JSON schema。唔好亂作療程價錢。visualPrompt / camera / lighting / masterPrompt / overallStyle 用英文；label 可中文。"
       ].join("\n");
     }
 
