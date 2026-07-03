@@ -1171,6 +1171,42 @@
       required: ["slides"]
     };
 
+    const IMAGE_PROMPT_SCHEMA = {
+      type: "object",
+      properties: {
+        prompts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slideIndex: { type: "integer" },
+              prompt: { type: "string" }
+            },
+            required: ["slideIndex", "prompt"]
+          }
+        }
+      },
+      required: ["prompts"]
+    };
+
+    function imagePromptPrompt(r) {
+      const slides = (Array.isArray(r.carousel) ? r.carousel : [])
+        .map((s, i) => `Slide ${i + 1}（${s.slideType || "content"}）：${s.title || ""} — ${s.body || ""}`)
+        .join("\n");
+      return [
+        "你是香港美容業 IG Carousel 圖片生成 prompt 編導。根據以下每張 slide 嘅內容，各出一條可餵去 Midjourney / 即夢 / Imagen 嘅圖片生成 prompt。英文為主，關鍵詞風格。",
+        "主題：" + r.title,
+        refBlock(r),
+        "",
+        "Carousel slide 內容：",
+        slides || "（無 carousel，請按主題出 6 張）",
+        "",
+        "風格固定：美容沙龍質感、香港 30-55 歲女性、自然光、品牌色 #c96b8a 點綴、乾淨背景、IG carousel 尺度 4:5。",
+        "cover slide 要吸睛、content slide 要清晰可讀（留位疊字）、cta slide 要留白可疊字。",
+        "每條 prompt 對應一張 slide，slideIndex 由 0 開始。嚴格跟 JSON schema。"
+      ].join("\n");
+    }
+
     function carouselPrompt(r) {
       return [
         "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容。繁體中文、廣東話自然。",
@@ -1277,6 +1313,36 @@
       if (!r) return;
       if (r.carousel && r.carousel.length && !confirm("重新生成會拎走現有 Carousel，繼續？")) return;
       generateCarousel();
+    }
+
+    async function generateImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.carouselConfirmedAt) { alert("先喺 Step 5 確認 Carousel。"); return; }
+      const btn = document.getElementById("ai-gen-image-prompts");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(imagePromptPrompt(r), IMAGE_PROMPT_SCHEMA);
+        r.imagePrompts = (Array.isArray(data.prompts) ? data.prompts : []).map((p) => ({
+          slideIndex: Number(p.slideIndex) || 0,
+          prompt: p.prompt || ""
+        }));
+        r.imagePromptAt = null;
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.imagePrompts?.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt"); }
+      }
+    }
+
+    function regenerateImagePrompts() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.imagePrompts && r.imagePrompts.length && !confirm("重新生成會拎走現有圖片 prompt 同確認狀態，繼續？")) return;
+      generateImagePrompts();
     }
 
     const REVIEW_SCHEMA = {
@@ -1594,6 +1660,57 @@
       renderPlan();
     }
 
+    function renderImagePrompts() {
+      const box = document.getElementById("image-prompt-list");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.imagePrompts || !r.imagePrompts.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成圖片 prompt」根據每張 carousel slide 出圖片生成 prompt。</p>';
+        return;
+      }
+      const carousel = r.carousel || [];
+      box.innerHTML = r.imagePrompts.map((p, i) =>
+        `<div class="video-prompt-block" data-i="${i}">
+          <div class="video-prompt-meta">Slide ${p.slideIndex + 1}：${escapeHtml((carousel[p.slideIndex] && carousel[p.slideIndex].title) || "")}</div>
+          <label>圖片 prompt（可編輯）</label>
+          <textarea class="ip-prompt">${escapeHtml(p.prompt || "")}</textarea>
+        </div>`
+      ).join("");
+    }
+
+    function confirmImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.imagePrompts || !r.imagePrompts.length) { alert("先生成圖片 prompt。"); return; }
+      const box = document.getElementById("image-prompt-list");
+      if (box) {
+        box.querySelectorAll(".video-prompt-block").forEach((blk) => {
+          const i = Number(blk.dataset.i);
+          if (r.imagePrompts[i]) r.imagePrompts[i].prompt = blk.querySelector(".ip-prompt").value;
+        });
+      }
+      r.imagePromptAt = new Date().toISOString();
+      r.updatedAt = r.imagePromptAt;
+      saveReels(state);
+      renderPlan();
+    }
+
+    function copyImagePrompts() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.imagePrompts || !r.imagePrompts.length) { alert("圖片 prompt 係空，無嘢可複製。"); return; }
+      const text = `【Carousel 圖片生成 prompt — ${r.title || ""}】\n\n` +
+        r.imagePrompts.map((p) => `【Slide ${p.slideIndex + 1}】\n${p.prompt || ""}`).join("\n\n");
+      const btn = document.getElementById("copy-image-prompts");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          if (btn) { const old = btn.textContent; btn.textContent = "已複製 ✓"; setTimeout(() => { btn.textContent = old; }, 1500); }
+        }).catch(() => { alert("複製失敗，請手動選取複製。"); });
+      } else {
+        alert("此瀏覽器唔支援自動複製，請手動選取複製。");
+      }
+    }
+
     function canAdvanceToStep1(r) {
       return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
     }
@@ -1792,7 +1909,17 @@
             </div>
           </div>
           <div class="wizard-step" data-step-n="6">
-            <p style="color:#7a6f7a;font-size:13px">Step 6 預留：圖片生成 prompt（Task 4 實作）。</p>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-image-prompts">${r.imagePrompts && r.imagePrompts.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt"}</button>
+              </div>
+              <div id="image-prompt-list"></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-image-prompts">${r.imagePromptAt ? "已確認（重新確認）" : "確認圖片 prompt"}</button>
+                <button type="button" id="copy-image-prompts" ${r.imagePromptAt ? "" : "disabled"}>複製圖片 prompt</button>
+              </div>
+              <div class="field"><label>已生成圖片素材連結/備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="貼去 Midjourney/即夢生成後，記低素材連結或備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+            </div>
           </div>
           <div class="wizard-nav">
             <button type="button" id="wiz-prev">← 上一步</button>
@@ -1969,6 +2096,19 @@
         saveReels(state);
         renderPlan();
       });
+      const genImageBtn = panel.querySelector("#ai-gen-image-prompts");
+      if (genImageBtn) genImageBtn.addEventListener("click", regenerateImagePrompts);
+      const confirmImageBtn = panel.querySelector("#confirm-image-prompts");
+      if (confirmImageBtn) confirmImageBtn.addEventListener("click", confirmImagePrompts);
+      const copyImageBtn = panel.querySelector("#copy-image-prompts");
+      if (copyImageBtn) copyImageBtn.addEventListener("click", copyImagePrompts);
+      const imageNoteEl = panel.querySelector("#image-asset-note");
+      if (imageNoteEl) imageNoteEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetNote = imageNoteEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
       renderHookCandidates();
       renderCtaPicker();
       renderScriptReview();
@@ -1976,6 +2116,7 @@
       renderDirectionCandidates();
       renderVideoPrompts();
       renderCarousel();
+      renderImagePrompts();
     }
 
     function renderShootChecklist() {

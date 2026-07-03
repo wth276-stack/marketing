@@ -519,3 +519,29 @@ test("reels-studio Step 5 Carousel post 內容", async () => {
   assert.match(html, /6 張 slide/);
   assert.match(html, /canAdvanceToStep6\(r\)\s*\{\s*return !!r\.carouselConfirmedAt;/);
 });
+
+test("reels-studio Step 6 圖片生成 prompt", async () => {
+  const html = await readHtml();
+  assert.match(html, /const IMAGE_PROMPT_SCHEMA = \{/);
+  assert.match(html, /prompts:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /slideIndex:\s*\{\s*type:\s*"integer"\s*\}/);
+  assert.match(html, /required:\s*\["slideIndex",\s*"prompt"\]/);
+  assert.match(html, /function imagePromptPrompt\(/);
+  assert.match(html, /function generateImagePrompts\(/);
+  assert.match(html, /function regenerateImagePrompts\(/);
+  assert.match(html, /function renderImagePrompts\(/);
+  assert.match(html, /function confirmImagePrompts\(/);
+  assert.match(html, /function copyImagePrompts\(/);
+  assert.match(html, /callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA\)/);
+  for (const id of ["ai-gen-image-prompts", "image-prompt-list", "confirm-image-prompts", "copy-image-prompts", "image-asset-note"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /r\.imagePrompts = \(Array\.isArray\(data\.prompts\)/);
+  assert.match(html, /r\.imagePromptAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有圖片 prompt/);
+  assert.match(html, /美容沙龍/);
+  assert.match(html, /#c96b8a/);
+  assert.match(html, /自然光/);
+  assert.match(html, /4:5/);
+  assert.match(html, /Midjourney \/ 即夢 \/ Imagen/);
+});
