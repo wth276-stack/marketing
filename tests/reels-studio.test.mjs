@@ -148,7 +148,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v18/);
+  assert.match(sw, /jessi-workflow-cache-v19/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -167,7 +167,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v18/);
+  assert.match(sw, /jessi-workflow-cache-v19/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -199,7 +199,7 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v18/);
+  assert.match(sw, /jessi-workflow-cache-v19/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -347,7 +347,7 @@ test("reels-studio Stage C script review + polish", async () => {
 test("reels-studio v3 migration + inferWizardStep + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v18/);
+  assert.match(sw, /jessi-workflow-cache-v19/);
   assert.match(html, /const REEL_SCHEMA_VERSION = 3/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function inferWizardStep\(/);
@@ -391,4 +391,54 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
   assert.match(html, /lengthStyle\?.lengthSec/);
   assert.doesNotMatch(html, /structureAngles:/);
   assert.match(html, /canAdvanceToStep2\(r\)\s*\{\s*const p = r\.aiPicks \|\| \{\};\s*return !!\(p\.structure && p\.angle && p\.lengthSec != null && p\.subtitleStyle && p\.ctaStyle && p\.broll\);\s*\}/);
+});
+
+test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
+  const html = await readHtml();
+  const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
+  assert.match(sw, /jessi-workflow-cache-v19/);
+  // state.ideaDrafts normalize
+  assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
+  assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
+  // schema
+  assert.match(html, /const IDEA_BATCH_SCHEMA = \{/);
+  assert.match(html, /ideas:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /rationale:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /required:\s*\["ideas"\]/);
+  // prompt
+  assert.match(html, /function ideaBatchPrompt\(/);
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
+  assert.match(html, /refBlock\(\{\s*reference:\s*""\s*\}\)/);
+  assert.match(html, /出 12-15 個 Reel idea/);
+  for (const s of ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型", "對比型", "步驟型"]) {
+    assert.match(html, new RegExp(s), `missing structure ${s}`);
+  }
+  // generate
+  assert.match(html, /function generateAiIdeas\(/);
+  assert.match(html, /callGemini\(ideaBatchPrompt\(topic, coreHint\), IDEA_BATCH_SCHEMA\)/);
+  assert.match(html, /state\.ideaDrafts = .*\.map\(\(idea\) =>/);
+  assert.match(html, /重新生成會拎走現有 idea 池/);
+  // create reels from drafts
+  assert.match(html, /function createReelsFromDrafts\(/);
+  assert.match(html, /reel\.title = draft\.title/);
+  assert.match(html, /reel\.coreMessage = draft\.coreMessage/);
+  assert.match(html, /reel\.aiPicks\.structure = /);
+  assert.match(html, /reel\.wizardStep = 0/);
+  assert.match(html, /state\.ideaDrafts = state\.ideaDrafts\.filter\(\(d\) => !d\.selected\)/);
+  assert.match(html, /已建立 /);
+});
+
+test("reels-studio Idea 批量生成 — UI panel + render", async () => {
+  const html = await readHtml();
+  for (const id of ["open-idea-batch", "idea-batch-panel", "idea-batch-topic", "idea-batch-core", "ai-generate-ideas", "idea-drafts", "create-reels-from-drafts", "idea-draft-count", "clear-idea-drafts"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /function renderIdeaDrafts\(/);
+  assert.match(html, /批量出 Idea/);
+  assert.match(html, /建立選中嘅 reel/);
+  assert.match(html, /品牌資料 \+ 受眾.*已自動套用/);
+  assert.match(html, /\.idea-draft-card\s*\{/);
+  assert.match(html, /addEventListener\("click", generateAiIdeas\)/);
+  assert.match(html, /addEventListener\("click", createReelsFromDrafts\)/);
+  assert.match(html, /已揀 /);
 });
