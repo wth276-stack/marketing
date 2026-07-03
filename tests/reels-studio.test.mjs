@@ -456,7 +456,7 @@ test("reels-studio Idea 批量生成 — UI panel + render", async () => {
   assert.match(html, /已揀 /);
 });
 
-test("reels-studio v4 migrate wraps v3 + goWizardStep clamps 0-6", async () => {
+test("reels-studio v4 migrate spreads r + goWizardStep clamps 0-6", async () => {
   const html = await readHtml();
   assert.match(html, /function migrateReelToV4\(r\) \{\s*const out = \{\s*\.\.\.r\s*\};/);
   assert.doesNotMatch(html, /migrateReelToV4[\s\S]{0,200}?migrateReelToV3/);
