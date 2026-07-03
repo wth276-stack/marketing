@@ -344,7 +344,7 @@
     }
 
     function migrateReelToV4(r) {
-      const out = migrateReelToV3(r);
+      const out = { ...r };
       if (!Array.isArray(out.videoPrompts)) out.videoPrompts = [];
       if (typeof out.videoMasterPrompt !== "string") out.videoMasterPrompt = "";
       if (typeof out.videoOverallStyle !== "string") out.videoOverallStyle = "";

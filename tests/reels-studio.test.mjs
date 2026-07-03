@@ -458,7 +458,8 @@ test("reels-studio Idea 批量生成 — UI panel + render", async () => {
 
 test("reels-studio v4 migrate wraps v3 + goWizardStep clamps 0-6", async () => {
   const html = await readHtml();
-  assert.match(html, /function migrateReelToV4\(r\) \{\s*const out = migrateReelToV3\(r\);/);
+  assert.match(html, /function migrateReelToV4\(r\) \{\s*const out = \{\s*\.\.\.r\s*\};/);
+  assert.doesNotMatch(html, /migrateReelToV4[\s\S]{0,200}?migrateReelToV3/);
   assert.match(html, /if \(!Array\.isArray\(out\.videoPrompts\)\) out\.videoPrompts = \[\];/);
   assert.match(html, /if \(typeof out\.videoMasterPrompt !== "string"\) out\.videoMasterPrompt = "";/);
   assert.match(html, /if \(out\.carouselConfirmedAt === undefined\) out\.carouselConfirmedAt = null;/);
