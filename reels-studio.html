@@ -1151,6 +1151,43 @@
       required: ["shots", "overallStyle", "masterPrompt"]
     };
 
+    const CAROUSEL_SCHEMA = {
+      type: "object",
+      properties: {
+        slides: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slideType: { type: "string" },
+              title: { type: "string" },
+              body: { type: "string" },
+              cta: { type: "string" }
+            },
+            required: ["slideType", "title", "body", "cta"]
+          }
+        }
+      },
+      required: ["slides"]
+    };
+
+    function carouselPrompt(r) {
+      return [
+        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容。繁體中文、廣東話自然。",
+        "主題：" + r.title,
+        "鉤子：" + r.hook,
+        "重點：" + r.coreMessage,
+        "完整 caption（參考）：" + (r.caption || ""),
+        "互動目標：" + (r.interactionGoal || "未定"),
+        "語氣：" + r.tone,
+        "受眾：" + AUDIENCE,
+        refBlock(r),
+        "",
+        "6 張 slide 結構：slide 1 係 cover（slideType=\"cover\"，hook + 大標，引人停低）；slide 2-5 係 content（slideType=\"content\"，每張一個重點點列，承接主題）；slide 6 係 cta（slideType=\"cta\"，CTA slide，呼應互動目標）。",
+        "每張含 title、body、cta（cta slide 先填 cta，其餘可空字串）。嚴格跟 JSON schema。唔好亂作療程價錢。"
+      ].join("\n");
+    }
+
     function videoPromptPrompt(r) {
       const p = r.aiPicks || {};
       const segs = (Array.isArray(r.segments) ? r.segments : [])
@@ -1207,6 +1244,39 @@
       if (!r) return;
       if (r.videoPrompts && r.videoPrompts.length && !confirm("重新生成會拎走現有影片 prompt 同確認狀態，繼續？")) return;
       generateVideoPrompts();
+    }
+
+    async function generateCarousel() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.videoPromptAt) { alert("先喺 Step 4 確認影片 prompt。"); return; }
+      const btn = document.getElementById("ai-gen-carousel");
+      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      try {
+        const data = await callGemini(carouselPrompt(r), CAROUSEL_SCHEMA);
+        r.carousel = (Array.isArray(data.slides) ? data.slides : []).map((s) => ({
+          slideType: s.slideType || "content",
+          title: s.title || "",
+          body: s.body || "",
+          cta: s.cta || ""
+        }));
+        r.carouselAt = new Date().toISOString();
+        r.carouselConfirmedAt = null;
+        r.updatedAt = r.carouselAt;
+        saveReels(state);
+        renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.carousel?.length ? "重新生成 Carousel" : "AI 生成 Carousel"); }
+      }
+    }
+
+    function regenerateCarousel() {
+      const r = activeReel();
+      if (!r) return;
+      if (r.carousel && r.carousel.length && !confirm("重新生成會拎走現有 Carousel，繼續？")) return;
+      generateCarousel();
     }
 
     const REVIEW_SCHEMA = {
@@ -1474,6 +1544,56 @@
       }
     }
 
+    function renderCarousel() {
+      const box = document.getElementById("carousel-slides");
+      if (!box) return;
+      const r = activeReel();
+      if (!r || !r.carousel || !r.carousel.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">撳「AI 生成 Carousel」出 6 張 slide 文字內容（封面 + 內容 + CTA）。</p>';
+        return;
+      }
+      box.innerHTML = r.carousel.map((s, i) =>
+        `<div class="carousel-slide" data-i="${i}">
+          <div class="slide-type">Slide ${i + 1}：${escapeHtml(s.slideType || "content")} <button type="button" class="slide-del" style="float:right">✕</button></div>
+          <input class="cs-title" placeholder="標題" value="${escapeHtml(s.title || "")}">
+          <textarea class="cs-body" placeholder="內文">${escapeHtml(s.body || "")}</textarea>
+          <input class="cs-cta" placeholder="CTA（CTA slide 先填）" value="${escapeHtml(s.cta || "")}">
+        </div>`
+      ).join("");
+      box.querySelectorAll(".slide-del").forEach((b) => {
+        b.addEventListener("click", () => {
+          const r2 = activeReel(); if (!r2) return;
+          const card = b.closest(".carousel-slide");
+          const i = Number(card.dataset.i);
+          r2.carousel.splice(i, 1);
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderPlan();
+        });
+      });
+    }
+
+    function confirmCarousel() {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (!r.carousel || !r.carousel.length) { alert("先生成 Carousel。"); return; }
+      const box = document.getElementById("carousel-slides");
+      if (box) {
+        box.querySelectorAll(".carousel-slide").forEach((card) => {
+          const i = Number(card.dataset.i);
+          if (r.carousel[i]) {
+            r.carousel[i].title = card.querySelector(".cs-title").value;
+            r.carousel[i].body = card.querySelector(".cs-body").value;
+            r.carousel[i].cta = card.querySelector(".cs-cta").value;
+          }
+        });
+      }
+      r.carouselConfirmedAt = new Date().toISOString();
+      r.updatedAt = r.carouselConfirmedAt;
+      saveReels(state);
+      renderPlan();
+    }
+
     function canAdvanceToStep1(r) {
       return !!(r.title.trim() && r.hook.trim() && r.coreMessage.trim() && r.cta.trim());
     }
@@ -1660,7 +1780,16 @@
             </div>
           </div>
           <div class="wizard-step" data-step-n="5">
-            <p style="color:#7a6f7a;font-size:13px">Step 5 預留：Carousel post 內容（Task 3 實作）。</p>
+            <div class="ai-block">
+              <div class="toolbar">
+                <button type="button" id="ai-gen-carousel">${r.carousel && r.carousel.length ? "重新生成 Carousel" : "AI 生成 Carousel"}</button>
+                <button type="button" id="carousel-add">+ 加 slide</button>
+              </div>
+              <div id="carousel-slides"></div>
+              <div class="confirm-bar">
+                <button type="button" id="confirm-carousel">${r.carouselConfirmedAt ? "已確認（重新確認）" : "確認 Carousel"}</button>
+              </div>
+            </div>
           </div>
           <div class="wizard-step" data-step-n="6">
             <p style="color:#7a6f7a;font-size:13px">Step 6 預留：圖片生成 prompt（Task 4 實作）。</p>
@@ -1827,12 +1956,26 @@
         r2.updatedAt = new Date().toISOString();
         saveReels(state);
       });
+      const genCarouselBtn = panel.querySelector("#ai-gen-carousel");
+      if (genCarouselBtn) genCarouselBtn.addEventListener("click", regenerateCarousel);
+      const confirmCarouselBtn = panel.querySelector("#confirm-carousel");
+      if (confirmCarouselBtn) confirmCarouselBtn.addEventListener("click", confirmCarousel);
+      const carouselAddBtn = panel.querySelector("#carousel-add");
+      if (carouselAddBtn) carouselAddBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.carousel = r2.carousel || [];
+        r2.carousel.push({ slideType: "content", title: "", body: "", cta: "" });
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        renderPlan();
+      });
       renderHookCandidates();
       renderCtaPicker();
       renderScriptReview();
       renderAiOptions();
       renderDirectionCandidates();
       renderVideoPrompts();
+      renderCarousel();
     }
 
     function renderShootChecklist() {

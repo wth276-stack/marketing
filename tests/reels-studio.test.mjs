@@ -495,3 +495,27 @@ test("reels-studio Step 4 影片素材生成 prompt", async () => {
   assert.match(html, /Veo \/ Runway \/ Sora/);
   assert.match(html, /canAdvanceToStep5\(r\)\s*\{\s*return !!r\.videoPromptAt;/);
 });
+
+test("reels-studio Step 5 Carousel post 內容", async () => {
+  const html = await readHtml();
+  assert.match(html, /const CAROUSEL_SCHEMA = \{/);
+  assert.match(html, /slides:\s*\{\s*type:\s*"array"/);
+  assert.match(html, /slideType:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(html, /required:\s*\["slideType",\s*"title",\s*"body",\s*"cta"\]/);
+  assert.match(html, /function carouselPrompt\(/);
+  assert.match(html, /function generateCarousel\(/);
+  assert.match(html, /function regenerateCarousel\(/);
+  assert.match(html, /function renderCarousel\(/);
+  assert.match(html, /function confirmCarousel\(/);
+  assert.match(html, /callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA\)/);
+  for (const id of ["ai-gen-carousel", "carousel-slides", "carousel-add", "confirm-carousel"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
+  }
+  assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
+  assert.match(html, /r\.carousel = \(Array\.isArray\(data\.slides\)/);
+  assert.match(html, /r\.carouselAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /r\.carouselConfirmedAt = new Date\(\)\.toISOString\(\)/);
+  assert.match(html, /重新生成會拎走現有 Carousel/);
+  assert.match(html, /6 張 slide/);
+  assert.match(html, /canAdvanceToStep6\(r\)\s*\{\s*return !!r\.carouselConfirmedAt;/);
+});
