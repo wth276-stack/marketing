@@ -222,7 +222,7 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
   const html = await readHtml();
-  assert.match(html, /const AUDIENCE = "30-55 歲女性（香港），關注逆齡、輪廓、膚質、色斑"/);
+  assert.match(html, /const AUDIENCE = "30-55 歲女性（香港），關注美容保養（肌膚 \/ 身形 \/ 自我照顧）"/);
   assert.match(html, /audience:\s*AUDIENCE/);
   assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
   assert.match(html, /hookCandidates:\s*\[\]/);
@@ -264,7 +264,8 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /reference:\s*""/);
   assert.match(html, /id="p-reference"/);
   assert.match(html, /參考資料（選填/);
-  assert.match(html, /品牌資料（必須跟/);
+  assert.match(html, /品牌資料（只用嚟限制療程名\/價錢\/claim-safety/);
+  assert.match(html, /唔好用嚟決定內容主題方向/);
   assert.match(html, /refBlock\(r\)/);
   assert.match(html, /hookFormulaSel:\s*"AI 自動揀"/);
   assert.match(html, /id="hook-formula-select"/);
@@ -422,6 +423,8 @@ test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () =>
   assert.match(html, /function ideaBatchPrompt\(/);
   assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
   assert.match(html, /refBlock\(\{\s*reference:\s*""\s*\}\)/);
+  assert.match(html, /內容方向必須緊貼用家主題/);
+  assert.match(html, /唔好將主題強行拉去面部鬆弛\/輪廓\/色斑等品牌預設方向/);
   assert.match(html, /出 12-15 個 Reel idea/);
   for (const s of ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型", "對比型", "步驟型"]) {
     assert.match(html, new RegExp(s), `missing structure ${s}`);
