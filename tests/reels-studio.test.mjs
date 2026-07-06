@@ -574,3 +574,24 @@ test("reels-studio 數據安全：saveReels 失敗處理 + toast + cross-tab syn
   assert.match(html, /addEventListener\(\s*["']storage["']/);
   assert.match(html, /另一分頁更新咗/);
 });
+
+test("reels-studio 自動備份 IndexedDB + 還原 UI", async () => {
+  const html = await readHtml();
+  assert.match(html, /function openBackupDb\(/);
+  assert.match(html, /function saveBackup\(/);
+  assert.match(html, /function listBackups\(/);
+  assert.match(html, /function restoreBackup\(/);
+  assert.match(html, /function deleteBackup\(/);
+  assert.match(html, /function scheduleBackup\(/);
+  assert.match(html, /function renderBackupPanel\(/);
+  assert.match(html, /indexedDB\.open\(\s*["']jessi-reels-backup["']/);
+  assert.match(html, /["']snapshots["']/);
+  // scheduleBackup debounce
+  assert.match(html, /scheduleBackup\(\)/);
+  assert.match(html, /setTimeout\(/);
+  // 還原 UI ids
+  assert.match(html, /id="backup-panel"/);
+  assert.match(html, /id="backup-now"/);
+  assert.match(html, /id="backup-list"/);
+  assert.match(html, /備份與還原/);
+});

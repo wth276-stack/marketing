@@ -179,6 +179,14 @@
               <button type="button" id="ai-save-config">儲存設定</button>
             </div>
           </details>
+          <details id="backup-panel">
+            <summary>備份與還原</summary>
+            <div class="ai-settings-body">
+              <p class="ai-note">每次改動會自動備份到瀏覽器 IndexedDB（保留最近 20 個）。可手動還原。</p>
+              <button type="button" id="backup-now">立即備份</button>
+              <div id="backup-list"></div>
+            </div>
+          </details>
       </div>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="plan-panel">策劃</button>
@@ -456,6 +464,7 @@
     function saveReels(state) {
       try {
         localStorage.setItem(STORAGE, JSON.stringify(state));
+        scheduleBackup();
         return true;
       } catch (e) {
         if (isQuotaError(e)) {
@@ -534,6 +543,121 @@
       if (_toastTimer) clearTimeout(_toastTimer);
       _toastTimer = setTimeout(() => { el.hidden = true; }, 2500);
       el.onclick = () => { el.hidden = true; if (_toastTimer) clearTimeout(_toastTimer); };
+    }
+
+    const BACKUP_DB = "jessi-reels-backup";
+    const BACKUP_STORE = "snapshots";
+    const BACKUP_MAX = 20;
+
+    function openBackupDb() {
+      return new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) { reject(new Error("no-idb")); return; }
+        const req = indexedDB.open("jessi-reels-backup", 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(BACKUP_STORE)) {
+            db.createObjectStore(BACKUP_STORE, { keyPath: "ts" });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function saveBackup(currentState) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readwrite");
+        const store = tx.objectStore(BACKUP_STORE);
+        const ts = Date.now();
+        const snap = { ts, state: JSON.parse(JSON.stringify(currentState)), reelCount: Array.isArray(currentState.reels) ? currentState.reels.length : 0 };
+        store.put(snap);
+        tx.oncomplete = () => {
+          // 旋轉：保留最近 BACKUP_MAX 個
+          const rx = db.transaction(BACKUP_STORE, "readwrite");
+          const rstore = rx.objectStore(BACKUP_STORE);
+          const allReq = rstore.getAll();
+          allReq.onsuccess = () => {
+            const all = allReq.result || [];
+            if (all.length > BACKUP_MAX) {
+              all.sort((a, b) => a.ts - b.ts);
+              all.slice(0, all.length - BACKUP_MAX).forEach((s) => rstore.delete(s.ts));
+            }
+          };
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      })).catch(() => {});
+    }
+
+    function listBackups() {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readonly");
+        const req = tx.objectStore(BACKUP_STORE).getAll();
+        req.onsuccess = () => { db.close(); resolve((req.result || []).sort((a, b) => b.ts - a.ts)); };
+        req.onerror = () => { db.close(); reject(req.error); };
+      })).catch(() => []);
+    }
+
+    function deleteBackup(ts) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readwrite");
+        tx.objectStore(BACKUP_STORE).delete(ts);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      })).catch(() => {});
+    }
+
+    function restoreBackup(ts) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readonly");
+        const req = tx.objectStore(BACKUP_STORE).get(ts);
+        req.onsuccess = () => {
+          db.close();
+          const snap = req.result;
+          if (!snap || !snap.state) { reject(new Error("backup-not-found")); return; }
+          if (!confirm("還原呢個備份會覆蓋現有資料，繼續？")) { resolve(); return; }
+          saveReels(normalize(JSON.parse(JSON.stringify(snap.state))));
+          showToast("已還原備份，重新載入中…", "info");
+          setTimeout(() => location.reload(), 600);
+          resolve();
+        };
+        req.onerror = () => { db.close(); reject(req.error); };
+      })).catch((e) => { showToast("還原失敗：" + (e && e.message || "未知錯誤"), "error"); });
+    }
+
+    let _backupTimer = null;
+    function scheduleBackup() {
+      if (_backupTimer) clearTimeout(_backupTimer);
+      _backupTimer = setTimeout(() => { saveBackup(state); _backupTimer = null; }, 1000);
+    }
+
+    function renderBackupPanel() {
+      const box = document.getElementById("backup-list");
+      if (!box) return;
+      listBackups().then((items) => {
+        if (!items.length) {
+          box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">未有自動備份紀錄。</p>';
+          return;
+        }
+        box.innerHTML = items.slice(0, 10).map((b) => {
+          const d = new Date(b.ts);
+          const label = d.toLocaleString("zh-HK", { hour12: false });
+          return '<div class="backup-item" data-ts="' + b.ts + '">' +
+            '<span>' + escapeHtml(label) + ' · ' + b.reelCount + ' 條 reel</span> ' +
+            '<button type="button" class="backup-restore">還原</button> ' +
+            '<button type="button" class="backup-del">刪</button>' +
+            '</div>';
+        }).join("");
+        box.querySelectorAll(".backup-item").forEach((el) => {
+          const ts = Number(el.dataset.ts);
+          el.querySelector(".backup-restore").addEventListener("click", () => restoreBackup(ts));
+          el.querySelector(".backup-del").addEventListener("click", () => {
+            if (!confirm("刪除呢個備份？")) return;
+            deleteBackup(ts).then(renderBackupPanel);
+          });
+        });
+      });
     }
 
     function loadAiConfig() {
@@ -2479,6 +2603,11 @@
         alert("AI 設定已儲存。");
       });
     })();
+
+    document.getElementById("backup-now").addEventListener("click", () => {
+      saveBackup(state).then(() => { showToast("已建立備份", "info"); renderBackupPanel(); });
+    });
+    renderBackupPanel();
   </script>
 </body>
 </html>
