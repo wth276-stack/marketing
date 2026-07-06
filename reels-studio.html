@@ -2608,6 +2608,26 @@
       saveBackup(state).then(() => { showToast("已建立備份", "info"); renderBackupPanel(); });
     });
     renderBackupPanel();
+
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      navigator.serviceWorker.register("jessi-workflow-sw.js").then((reg) => {
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              showToast("有新版本，重新整理生效（撳呢度 reload）", "update");
+              const t = document.getElementById("app-toast");
+              if (t) t.onclick = () => location.reload();
+            }
+          });
+        });
+      }).catch(() => {});
+      // 定期檢查更新（每 60 分鐘）
+      setInterval(() => {
+        navigator.serviceWorker.getRegistration().then((reg) => { if (reg) reg.update(); }).catch(() => {});
+      }, 60 * 60 * 1000);
+    }
   </script>
 </body>
 </html>
