@@ -125,10 +125,15 @@
     .asset-note { width: 100%; min-height: 50px; font: inherit; resize: vertical; box-sizing: border-box; }
     .confirm-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
     .confirm-bar button { padding: 6px 12px; }
+    .app-toast { position: fixed; top: 16px; right: 16px; z-index: 9999; max-width: 320px; padding: 10px 14px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); background: #2a2230; color: #fff; cursor: pointer; }
+    .app-toast.error { background: #b3261e; }
+    .app-toast.update { background: #c96b8a; }
+    .app-toast.info { background: #2a2230; }
   </style>
 </head>
 <body>
   <p id="privacy">⚠️ 私隱提醒：唔好輸入客人全名、電話、完整對話或相片。</p>
+  <div id="app-toast" class="app-toast" hidden></div>
   <div class="app-shell">
     <aside id="reel-list">
       <div class="toolbar">
@@ -174,6 +179,14 @@
               <button type="button" id="ai-save-config">儲存設定</button>
             </div>
           </details>
+          <details id="backup-panel">
+            <summary>備份與還原</summary>
+            <div class="ai-settings-body">
+              <p class="ai-note">每次改動會自動備份到瀏覽器 IndexedDB（保留最近 20 個）。可手動還原。</p>
+              <button type="button" id="backup-now">立即備份</button>
+              <div id="backup-list"></div>
+            </div>
+          </details>
       </div>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="plan-panel">策劃</button>
@@ -212,7 +225,7 @@
       save: ["save 低呢條，下次跟住做", "save 低下次睇返", "呢個框架遲啲用得返，save 先"],
       share: ["send 畀一個成日卡住嘅朋友", "轉畀你覺得會需要嘅人", "send 畀身邊都係咁嘅人"]
     };
-    const AUDIENCE = "30-55 歲女性（香港），關注逆齡、輪廓、膚質、色斑";
+    const AUDIENCE = "30-55 歲女性（香港），關注美容保養（肌膚 / 身形 / 自我照顧）";
     const BRAND_REFERENCE = [
       "品牌：JESSI BEAUTY（尖沙咀「逆齡專家」）。目標客：30-55 歲女士，開始面對鬆弛、皺紋、膚質變差、色斑。",
       "語氣：專業、高級、溫柔、可信、唔 hard sell；廣東話為主。客人怕動刀、怕誇張、怕被 sell，想自然、想有人專業分析。",
@@ -230,7 +243,7 @@
     ].join("\n");
     function refBlock(r) {
       return [
-        "【品牌資料（必須跟，唔准作療程/價錢/療效）】",
+        "【品牌資料（只用嚟限制療程名/價錢/claim-safety，唔准作療程/價錢/療效；亦唔好用嚟決定內容主題方向——內容永遠以用家輸入嘅主題為準；如果主題同品牌資料嘅療程無直接關連，就圍繞主題本身出內容，唔好將主題強行拉去逆齡/面部鬆弛/輪廓等品牌預設方向）】",
         BRAND_REFERENCE,
         r.reference && r.reference.trim() ? "【用家補充參考資料】\n" + r.reference.trim() : ""
       ].filter(Boolean).join("\n");
@@ -449,7 +462,20 @@
     }
 
     function saveReels(state) {
-      localStorage.setItem(STORAGE, JSON.stringify(state));
+      try {
+        localStorage.setItem(STORAGE, JSON.stringify(state));
+        scheduleBackup();
+        return true;
+      } catch (e) {
+        if (isQuotaError(e)) {
+          showToast("儲存失敗：瀏覽器空間不足，自動匯出備份中…", "error");
+          try { exportJson(); } catch {}
+          alert("localStorage 空間不足，已自動匯出備份。請清理舊 reel 或匯入備份後再繼續。");
+        } else {
+          showToast("儲存失敗，請再試", "error");
+        }
+        return false;
+      }
     }
 
     let state = loadReels();
@@ -499,6 +525,139 @@
     function escapeHtml(s) {
       return String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function isQuotaError(e) {
+      if (!e) return false;
+      if (e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014)) return true;
+      return /quota|storage|空間/i.test(String(e && (e.message || e) || ""));
+    }
+
+    let _toastTimer = null;
+    function showToast(msg, kind) {
+      const el = document.getElementById("app-toast");
+      if (!el) { alert(msg); return; }
+      el.textContent = msg;
+      el.className = "app-toast " + (kind || "info");
+      el.hidden = false;
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => { el.hidden = true; }, 2500);
+      el.onclick = () => { el.hidden = true; if (_toastTimer) clearTimeout(_toastTimer); };
+    }
+
+    const BACKUP_DB = "jessi-reels-backup";
+    const BACKUP_STORE = "snapshots";
+    const BACKUP_MAX = 20;
+
+    function openBackupDb() {
+      return new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) { reject(new Error("no-idb")); return; }
+        const req = indexedDB.open("jessi-reels-backup", 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(BACKUP_STORE)) {
+            db.createObjectStore(BACKUP_STORE, { keyPath: "ts" });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function saveBackup(currentState) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readwrite");
+        const store = tx.objectStore(BACKUP_STORE);
+        const ts = Date.now();
+        const snap = { ts, state: JSON.parse(JSON.stringify(currentState)), reelCount: Array.isArray(currentState.reels) ? currentState.reels.length : 0 };
+        store.put(snap);
+        tx.oncomplete = () => {
+          // 旋轉：保留最近 BACKUP_MAX 個
+          const rx = db.transaction(BACKUP_STORE, "readwrite");
+          const rstore = rx.objectStore(BACKUP_STORE);
+          const allReq = rstore.getAll();
+          allReq.onsuccess = () => {
+            const all = allReq.result || [];
+            if (all.length > BACKUP_MAX) {
+              all.sort((a, b) => a.ts - b.ts);
+              all.slice(0, all.length - BACKUP_MAX).forEach((s) => rstore.delete(s.ts));
+            }
+          };
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      })).catch(() => {});
+    }
+
+    function listBackups() {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readonly");
+        const req = tx.objectStore(BACKUP_STORE).getAll();
+        req.onsuccess = () => { db.close(); resolve((req.result || []).sort((a, b) => b.ts - a.ts)); };
+        req.onerror = () => { db.close(); reject(req.error); };
+      })).catch(() => []);
+    }
+
+    function deleteBackup(ts) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readwrite");
+        tx.objectStore(BACKUP_STORE).delete(ts);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      })).catch(() => {});
+    }
+
+    function restoreBackup(ts) {
+      return openBackupDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction(BACKUP_STORE, "readonly");
+        const req = tx.objectStore(BACKUP_STORE).get(ts);
+        req.onsuccess = () => {
+          db.close();
+          const snap = req.result;
+          if (!snap || !snap.state) { reject(new Error("backup-not-found")); return; }
+          if (!confirm("還原呢個備份會覆蓋現有資料，繼續？")) { resolve(); return; }
+          saveReels(normalize(JSON.parse(JSON.stringify(snap.state))));
+          showToast("已還原備份，重新載入中…", "info");
+          setTimeout(() => location.reload(), 600);
+          resolve();
+        };
+        req.onerror = () => { db.close(); reject(req.error); };
+      })).catch((e) => { showToast("還原失敗：" + (e && e.message || "未知錯誤"), "error"); });
+    }
+
+    let _backupTimer = null;
+    function scheduleBackup() {
+      if (_backupTimer) clearTimeout(_backupTimer);
+      _backupTimer = setTimeout(() => { saveBackup(state); _backupTimer = null; }, 1000);
+    }
+
+    function renderBackupPanel() {
+      const box = document.getElementById("backup-list");
+      if (!box) return;
+      listBackups().then((items) => {
+        if (!items.length) {
+          box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">未有自動備份紀錄。</p>';
+          return;
+        }
+        box.innerHTML = items.slice(0, 10).map((b) => {
+          const d = new Date(b.ts);
+          const label = d.toLocaleString("zh-HK", { hour12: false });
+          return '<div class="backup-item" data-ts="' + b.ts + '">' +
+            '<span>' + escapeHtml(label) + ' · ' + b.reelCount + ' 條 reel</span> ' +
+            '<button type="button" class="backup-restore">還原</button> ' +
+            '<button type="button" class="backup-del">刪</button>' +
+            '</div>';
+        }).join("");
+        box.querySelectorAll(".backup-item").forEach((el) => {
+          const ts = Number(el.dataset.ts);
+          el.querySelector(".backup-restore").addEventListener("click", () => restoreBackup(ts));
+          el.querySelector(".backup-del").addEventListener("click", () => {
+            if (!confirm("刪除呢個備份？")) return;
+            deleteBackup(ts).then(renderBackupPanel);
+          });
+        });
+      });
     }
 
     function loadAiConfig() {
@@ -897,7 +1056,7 @@
         "",
         "出 12-15 個 Reel idea，散佈以下結構版型，每型 1-2 條：反差型 / 清單型 / 結果先行型 / 問題解答型 / 拆解型 / 錯誤型 / 教學型 / 故事型 / 對比型 / 步驟型。",
         "每個 idea 含：title（可做片標題嘅一句，具體可拍）、structure（上述 10 型之一）、coreMessage（一條片一個重點）、rationale（一句解釋點解呢個 idea 啱呢個結構）。",
-        "準則：idea 要具體、可拍、同主題相關；避免空泛（例如「美容小貼士」）；每個 idea 一個清晰可拍嘅切入點。只可參考品牌資料嘅療程名、價錢、定位，唔准自己作療效、價錢、療程名。",
+        "準則：idea 要具體、可拍、同主題相關；避免空泛（例如「美容小貼士」）；每個 idea 一個清晰可拍嘅切入點。內容方向必須緊貼用家主題——如果主題係身形/減肥/身體等唔係逆齡面部嘅範疇，就圍繞主題本身出 idea，唔好將主題強行拉去面部鬆弛/輪廓/色斑等品牌預設方向。品牌資料只用嚟限制療程名、價錢、定位，唔准自己作療效、價錢、療程名。",
         "輸出 JSON：ideas 陣列，每項含 title、structure、coreMessage、rationale。嚴格跟 JSON schema。"
       ].filter(Boolean).join("\n");
     }
@@ -1210,7 +1369,7 @@
 
     function carouselPrompt(r) {
       return [
-        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容。繁體中文、廣東話自然。",
+        "你是香港美容業 IG Carousel post 編輯。根據以下 Reel 主題同內容，出一個 6 張 slide 嘅 carousel post 文字內容，目標係用家可以直接貼落 IG 出到街、唔使再大執。繁體中文、廣東話自然。",
         "主題：" + r.title,
         "鉤子：" + r.hook,
         "重點：" + r.coreMessage,
@@ -1220,8 +1379,12 @@
         "受眾：" + AUDIENCE,
         refBlock(r),
         "",
-        "6 張 slide 結構：slide 1 係 cover（slideType=\"cover\"，hook + 大標，引人停低）；slide 2-5 係 content（slideType=\"content\"，每張一個重點點列，承接主題）；slide 6 係 cta（slideType=\"cta\"，CTA slide，呼應互動目標）。",
-        "每張含 title、body、cta（cta slide 先填 cta，其餘可空字串）。嚴格跟 JSON schema。唔好亂作療程價錢。"
+        "6 張 slide 結構同邏輯遞進（每張要有明確角色，唔好重複或各打各）：",
+        "slide 1 cover（slideType=\"cover\"）：hook 標題——用數字／反差／提問制造好奇心（例如「3 個你以為啱但原來錯嘅護膚習慣」），配一句副標點出主題。要令人停低掃落去。",
+        "slide 2-5 content（slideType=\"content\"）：每張一個獨立重點，要有遞進邏輯（例如：痛點 → 知識／解法 → 點做 → 好處）。title 係短而有力嘅重點句；body 係 2-4 行可出品文案，要有具體內容（數字、具體好處、具體動作、具體例子），唔好空泛口號或佔位符。用點列或短句方便 IG 閱讀。",
+        "slide 6 cta（slideType=\"cta\"）：明確行動呼籲——具體叫做乜（留言「X」攞資訊／save 留遲啲睇／DM 預約／follow），呼應互動目標。唔好淨係「了解更多」呢類空泛 CTA。",
+        "每張含 title、body、cta 欄位（cta slide 先填 cta 字串，其餘 cta 可空字串）。",
+        "嚴格跟 JSON schema。唔好亂作療程價錢、效果保證、醫療聲稱。內容要真實可信、對應返品牌資料。"
       ].join("\n");
     }
 
@@ -1231,7 +1394,7 @@
         .map((s, i) => `鏡${i + 1}（${s.durationSec || "?"}秒）：${s.label || ""} | 畫面：${s.shot || ""} | 旁白：${s.voiceover || ""} | 字幕：${s.subtitle || ""}`)
         .join("\n");
       return [
-        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可餵去 Veo / Runway / Sora 嘅影片生成 prompt。繁體中文 + 英文關鍵詞夾雜可。",
+        "你是香港美容業 IG Reels 影片素材編導。根據以下逐鏡結構，為每個鏡頭出一條可直接餵去 Veo / Runway / Sora 嘅影片生成 prompt。目標係用家拎去生成、剪埋一齊就出到街，唔使再執畫面。",
         "主題：" + r.title,
         "重點：" + r.coreMessage,
         "已揀結構：" + (p.structure || "（未揀）"),
@@ -1242,9 +1405,20 @@
         "逐鏡結構：",
         segs || "（無逐鏡資料，請按主題出 4-6 鏡）",
         "",
-        "每鏡 prompt 要包含：visualPrompt（畫面內容、人物動作、場景）、camera（鏡頭運動：特寫/中景/平移/推進等）、lighting（光線：自然光/柔光箱/逆光等）、durationSec（秒數）、label（鏡頭名）、segIndex（由 0 開始）。",
-        "再出一條 masterPrompt（整體風格 + 連貫元素，可一次過生成長片用）+ overallStyle（一句整體視覺風格描述）。",
-        "品牌質感：美容沙龍、香港女性、自然、唔過度打燈。嚴格跟 JSON schema。"
+        "【跨鏡一致性 — 最重要】全部鏡頭必須保持：同一個女主角（30-55 歲香港女性、自然妝容、唔濃妝、乾淨造型）、同一個美容沙龍場景（乾淨、木色／白色調、品牌色 #c96b8a 點綴）、統一色調（柔和自然光、暖白平衡、輕微 film grain）、統一服裝。呢啲連貫元素寫喺 masterPrompt 同 overallStyle，每鏡 visualPrompt 都要呼應。",
+        "",
+        "每鏡 prompt 欄位要求：",
+        "- visualPrompt：用英文寫一條完整 scene description（唔好淨係散關鍵詞），要包含：人物（年齡／性別／造型／情緒）、具體動作（例如 'applying serum to cheek with gentle fingertips'）、場景（'clean beauty salon, white counter, large mirror'）、道具（serum bottle, towel, green plant）、留位畀 IG overlay text（唔好生成中文字）。要具體到 AI 一睇就生成到正確畫面。",
+        "- camera：用業界英文關鍵詞，例如 close-up / medium shot / over-the-shoulder / slow push-in / static lockoff / pan / tracking shot / top-down。唔好用「特寫」呢類中文泛詞。",
+        "- lighting：用具體英文，例如 soft natural window light / softbox key light / gentle backlight / diffused daylight。避開硬光同過度打燈。",
+        "- durationSec：配合 reel 節奏（hook 鏡 2-3 秒、content 鏡 3-5 秒），整數。",
+        "- label：中文鏡頭名（例如「開場特寫」）。",
+        "- segIndex：由 0 開始整數。",
+        "",
+        "masterPrompt：一條完整可一次過餵去生成工具嘅英文長 prompt，包含全部連貫元素（女主角造型、場景、色調、brand color #c96b8a、film style、mood、avoid 項目例如 'avoid cartoonish, avoid overexposed, avoid text artifacts, avoid heavy makeup'）。用家可以直接用呢條生成長片。",
+        "overallStyle：一句英文描述整體視覺風格（例如 'Soft natural-light beauty salon footage, warm white balance, 30-55 Hong Kong woman with natural makeup, #c96b8a brand accent, calm premium aesthetic, subtle film grain'）。",
+        "",
+        "嚴格跟 JSON schema。唔好亂作療程價錢。visualPrompt / camera / lighting / masterPrompt / overallStyle 用英文；label 可中文。"
       ].join("\n");
     }
 
@@ -2363,6 +2537,19 @@
       renderPlan();
     }
 
+    window.addEventListener("storage", (ev) => {
+      if (ev.key !== STORAGE) return;
+      if (ev.newValue === null) return;
+      try {
+        state = normalize(JSON.parse(ev.newValue));
+        renderReelList();
+        renderPlan();
+        renderShootChecklist();
+        renderReview();
+        showToast("另一分頁更新咗資料，已同步", "info");
+      } catch {}
+    });
+
     document.getElementById("new-reel").addEventListener("click", addReel);
     document.getElementById("open-idea-batch").addEventListener("click", () => {
       const panel = document.getElementById("idea-batch-panel");
@@ -2416,6 +2603,31 @@
         alert("AI 設定已儲存。");
       });
     })();
+
+    document.getElementById("backup-now").addEventListener("click", () => {
+      saveBackup(state).then(() => { showToast("已建立備份", "info"); renderBackupPanel(); });
+    });
+    renderBackupPanel();
+
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      navigator.serviceWorker.register("jessi-workflow-sw.js").then((reg) => {
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              showToast("有新版本，重新整理生效（撳呢度 reload）", "update");
+              const t = document.getElementById("app-toast");
+              if (t) t.onclick = () => location.reload();
+            }
+          });
+        });
+      }).catch(() => {});
+      // 定期檢查更新（每 60 分鐘）
+      setInterval(() => {
+        navigator.serviceWorker.getRegistration().then((reg) => { if (reg) reg.update(); }).catch(() => {});
+      }, 60 * 60 * 1000);
+    }
   </script>
 </body>
 </html>

@@ -8,6 +8,12 @@ async function readHtml() {
   return readFile(htmlPath, "utf8");
 }
 
+const swPath = new URL("../jessi-workflow-sw.js", import.meta.url);
+
+async function readSw() {
+  return readFile(swPath, "utf8");
+}
+
 test("reels-studio exposes required standalone app structure", async () => {
   const html = await readHtml();
 
@@ -148,7 +154,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(sw, /jessi-workflow-cache-v21/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -167,7 +173,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(sw, /jessi-workflow-cache-v21/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -205,7 +211,7 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(sw, /jessi-workflow-cache-v21/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -222,7 +228,7 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
   const html = await readHtml();
-  assert.match(html, /const AUDIENCE = "30-55 歲女性（香港），關注逆齡、輪廓、膚質、色斑"/);
+  assert.match(html, /const AUDIENCE = "30-55 歲女性（香港），關注美容保養（肌膚 \/ 身形 \/ 自我照顧）"/);
   assert.match(html, /audience:\s*AUDIENCE/);
   assert.match(html, /tone:\s*"香港廣東話、自然、簡短"/);
   assert.match(html, /hookCandidates:\s*\[\]/);
@@ -264,7 +270,8 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /reference:\s*""/);
   assert.match(html, /id="p-reference"/);
   assert.match(html, /參考資料（選填/);
-  assert.match(html, /品牌資料（必須跟/);
+  assert.match(html, /品牌資料（只用嚟限制療程名\/價錢\/claim-safety/);
+  assert.match(html, /唔好用嚟決定內容主題方向/);
   assert.match(html, /refBlock\(r\)/);
   assert.match(html, /hookFormulaSel:\s*"AI 自動揀"/);
   assert.match(html, /id="hook-formula-select"/);
@@ -353,7 +360,7 @@ test("reels-studio Stage C script review + polish", async () => {
 test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(sw, /jessi-workflow-cache-v21/);
   assert.match(html, /const REEL_SCHEMA_VERSION = 4/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function migrateReelToV4\(/);
@@ -409,7 +416,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v20/);
+  assert.match(sw, /jessi-workflow-cache-v21/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -422,6 +429,8 @@ test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () =>
   assert.match(html, /function ideaBatchPrompt\(/);
   assert.match(html, /受眾："\s*\+\s*AUDIENCE/);
   assert.match(html, /refBlock\(\{\s*reference:\s*""\s*\}\)/);
+  assert.match(html, /內容方向必須緊貼用家主題/);
+  assert.match(html, /唔好將主題強行拉去面部鬆弛\/輪廓\/色斑等品牌預設方向/);
   assert.match(html, /出 12-15 個 Reel idea/);
   for (const s of ["反差型", "清單型", "結果先行型", "問題解答型", "拆解型", "錯誤型", "教學型", "故事型", "對比型", "步驟型"]) {
     assert.match(html, new RegExp(s), `missing structure ${s}`);
@@ -546,4 +555,54 @@ test("reels-studio Step 6 圖片生成 prompt", async () => {
   assert.match(html, /自然光/);
   assert.match(html, /4:5/);
   assert.match(html, /Midjourney \/ 即夢 \/ Imagen/);
+});
+
+test("reels-studio 數據安全：saveReels 失敗處理 + toast + cross-tab sync", async () => {
+  const html = await readHtml();
+  const sw = await readSw();
+  // toast helper + element
+  assert.match(html, /function showToast\(/);
+  assert.match(html, /id="app-toast"/);
+  // saveReels try/catch + quota handling
+  assert.match(html, /function isQuotaError\(/);
+  assert.match(html, /try\s*\{\s*localStorage\.setItem\(STORAGE/);
+  assert.match(html, /QuotaExceededError/);
+  assert.match(html, /空間不足/);
+  // saveReels returns boolean
+  assert.match(html, /function saveReels\(state\)\s*\{[\s\S]*?return\s+(true|false)/);
+  // cross-tab storage listener
+  assert.match(html, /addEventListener\(\s*["']storage["']/);
+  assert.match(html, /另一分頁更新咗/);
+});
+
+test("reels-studio 自動備份 IndexedDB + 還原 UI", async () => {
+  const html = await readHtml();
+  assert.match(html, /function openBackupDb\(/);
+  assert.match(html, /function saveBackup\(/);
+  assert.match(html, /function listBackups\(/);
+  assert.match(html, /function restoreBackup\(/);
+  assert.match(html, /function deleteBackup\(/);
+  assert.match(html, /function scheduleBackup\(/);
+  assert.match(html, /function renderBackupPanel\(/);
+  assert.match(html, /indexedDB\.open\(\s*["']jessi-reels-backup["']/);
+  assert.match(html, /["']snapshots["']/);
+  // scheduleBackup debounce
+  assert.match(html, /scheduleBackup\(\)/);
+  assert.match(html, /setTimeout\(/);
+  // 還原 UI ids
+  assert.match(html, /id="backup-panel"/);
+  assert.match(html, /id="backup-now"/);
+  assert.match(html, /id="backup-list"/);
+  assert.match(html, /備份與還原/);
+});
+
+test("reels-studio Service Worker 註冊 + 更新提示", async () => {
+  const html = await readHtml();
+  const sw = await readSw();
+  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(html, /navigator\.serviceWorker\.register\(\s*["']jessi-workflow-sw\.js["']/);
+  assert.match(html, /location\.protocol\s*!==\s*["']file:["']/);
+  assert.match(html, /updatefound/);
+  assert.match(html, /有新版本，重新整理/);
+  assert.match(html, /reg\.update\(\)/);
 });
