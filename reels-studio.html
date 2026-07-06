@@ -129,6 +129,11 @@
     .app-toast.error { background: #b3261e; }
     .app-toast.update { background: #c96b8a; }
     .app-toast.info { background: #2a2230; }
+    .ai-btn-loading { position: relative; padding-left: 28px; cursor: progress; }
+    .ai-btn-loading::before { content: ""; position: absolute; left: 8px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: ai-spin 0.8s linear infinite; }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    .ai-cancel-btn { margin-left: 8px; padding: 4px 12px; font-size: 13px; background: #b3261e; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    .ai-cancel-btn:hover { background: #9a211a; }
   </style>
 </head>
 <body>
@@ -730,6 +735,8 @@
     }
 
     function handleAiError(e) {
+      if (e && e.type === "cancelled") { return; }
+      if (e && e.type === "timeout") { showToast("Gemini 等太耐，請再試。", "error"); return; }
       if (e && e.type === "no-key") {
         const d = document.getElementById("ai-settings"); if (d) d.open = true;
         const k = document.getElementById("ai-api-key"); if (k) k.focus();
@@ -745,6 +752,33 @@
       if (e && e.type === "network") { alert("連唔到 Gemini，check 網絡。"); return; }
       if (e && e.type === "parse") { alert("Gemini 回應格式異常，請再試。"); console.warn("Gemini raw:", e.raw); return; }
       alert("發生未知錯誤。");
+    }
+
+    function bindAiBtnLoading(btn, baseLabel) {
+      const controller = new AbortController();
+      const start = Date.now();
+      let timer = null;
+      let cancelBtn = null;
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("ai-btn-loading");
+        btn.textContent = "生成中… 0s";
+        timer = setInterval(() => {
+          if (btn) btn.textContent = "生成中… " + Math.floor((Date.now() - start) / 1000) + "s";
+        }, 1000);
+        cancelBtn = document.createElement("button");
+        cancelBtn.type = "button";
+        cancelBtn.className = "ai-cancel-btn";
+        cancelBtn.textContent = "取消";
+        cancelBtn.addEventListener("click", () => controller.abort());
+        if (btn.parentNode) btn.parentNode.insertBefore(cancelBtn, btn.nextSibling);
+      }
+      function stop() {
+        if (timer) clearInterval(timer);
+        if (cancelBtn && cancelBtn.parentNode) cancelBtn.parentNode.removeChild(cancelBtn);
+        if (btn) { btn.disabled = false; btn.classList.remove("ai-btn-loading"); btn.textContent = baseLabel; }
+      }
+      return { signal: controller.signal, stop };
     }
 
     const AI_GROUP_ARRAY = {
@@ -809,9 +843,9 @@
       const fSel = document.getElementById("hook-formula-select");
       if (fSel) r.hookFormulaSel = fSel.value;
       const btn = document.getElementById("ai-generate-hooks");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(hookPrompt(r), HOOK_SCHEMA);
+        const data = await callGemini(hookPrompt(r), HOOK_SCHEMA, { signal: loading.signal });
         r.hookCandidates = Array.isArray(data.hooks) ? data.hooks : [];
         r.hookCandidatesAt = new Date().toISOString();
         r.updatedAt = r.hookCandidatesAt;
@@ -820,7 +854,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.hookCandidates?.length ? "重新生成 Hook" : "AI 生成 Hook"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.hookCandidates?.length ? "重新生成 Hook" : "AI 生成 Hook");
       }
     }
 
@@ -947,9 +982,9 @@
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.title.trim()) { alert("請先填主題。"); return; }
       const btn = document.getElementById("ai-generate-options");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA);
+        const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA, { signal: loading.signal });
         r.aiOptions = data;
         r.aiPicks = { structure: r.aiPicks?.structure || null, angle: r.aiPicks?.angle || null, lengthSec: r.aiPicks?.lengthSec ?? null, subtitleStyle: r.aiPicks?.subtitleStyle ?? null, ctaStyle: null, broll: null };
         r.updatedAt = new Date().toISOString();
@@ -958,7 +993,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiOptions ? "重新生成選項" : "AI 生成選項"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.aiOptions ? "重新生成選項" : "AI 生成選項");
       }
     }
 
@@ -1040,9 +1076,9 @@
       const p = r.aiPicks || {};
       if (!p.structure || !p.angle) { alert("先揀結構同角度。"); return; }
       const btn = document.getElementById("gen-directions");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(directionPrompt(r), DIRECTION_SCHEMA);
+        const data = await callGemini(directionPrompt(r), DIRECTION_SCHEMA, { signal: loading.signal });
         r.directionCandidates = Array.isArray(data.directions) ? data.directions : [];
         r.updatedAt = new Date().toISOString();
         saveReels(state);
@@ -1050,7 +1086,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.contentDirection ? "重新生成方向" : "生成方向建議"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.contentDirection ? "重新生成方向" : "生成方向建議");
       }
     }
 
@@ -1106,9 +1143,9 @@
         if (!confirm("重新生成會拎走現有 idea 池，繼續？")) return;
       }
       const btn = document.getElementById("ai-generate-ideas");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(ideaBatchPrompt(topic, coreHint), IDEA_BATCH_SCHEMA);
+        const data = await callGemini(ideaBatchPrompt(topic, coreHint), IDEA_BATCH_SCHEMA, { signal: loading.signal });
         const now = new Date().toISOString();
         state.ideaDrafts = (Array.isArray(data.ideas) ? data.ideas : []).map((idea) => ({
           id: uid(),
@@ -1125,7 +1162,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (Array.isArray(state.ideaDrafts) && state.ideaDrafts.length ? "重新生成 Idea" : "AI 生成 Idea"); }
+        loading.stop();
+        if (btn) btn.textContent = (Array.isArray(state.ideaDrafts) && state.ideaDrafts.length ? "重新生成 Idea" : "AI 生成 Idea");
       }
     }
 
@@ -1275,9 +1313,9 @@
       const r = activeReel();
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       const btn = document.getElementById("ai-generate-content");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(stageBPrompt(r), STAGE_B_SCHEMA);
+        const data = await callGemini(stageBPrompt(r), STAGE_B_SCHEMA, { signal: loading.signal });
         r.segments = (Array.isArray(data.segments) ? data.segments : []).map((s) => ({
           label: s.label || "",
           shot: s.shot || "",
@@ -1303,7 +1341,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.aiGeneratedAt ? "重新生成內容" : "生成完整內容"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.aiGeneratedAt ? "重新生成內容" : "生成完整內容");
       }
     }
 
@@ -1462,9 +1501,9 @@
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.aiGeneratedAt) { alert("先生成完整內容（Step 2）再出影片 prompt。"); return; }
       const btn = document.getElementById("ai-gen-video-prompts");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(videoPromptPrompt(r), VIDEO_PROMPT_SCHEMA);
+        const data = await callGemini(videoPromptPrompt(r), VIDEO_PROMPT_SCHEMA, { signal: loading.signal });
         r.videoPrompts = (Array.isArray(data.shots) ? data.shots : []).map((s) => ({
           segIndex: Number(s.segIndex) || 0,
           label: s.label || "",
@@ -1482,7 +1521,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.videoPrompts?.length ? "重新生成影片 prompt" : "AI 生成影片 prompt"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.videoPrompts?.length ? "重新生成影片 prompt" : "AI 生成影片 prompt");
       }
     }
 
@@ -1498,9 +1538,9 @@
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.videoPromptAt) { alert("先喺 Step 4 確認影片 prompt。"); return; }
       const btn = document.getElementById("ai-gen-carousel");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(carouselPrompt(r), CAROUSEL_SCHEMA);
+        const data = await callGemini(carouselPrompt(r), CAROUSEL_SCHEMA, { signal: loading.signal });
         r.carousel = (Array.isArray(data.slides) ? data.slides : []).map((s) => ({
           slideType: s.slideType || "content",
           title: s.title || "",
@@ -1515,7 +1555,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.carousel?.length ? "重新生成 Carousel" : "AI 生成 Carousel"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.carousel?.length ? "重新生成 Carousel" : "AI 生成 Carousel");
       }
     }
 
@@ -1531,9 +1572,9 @@
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.carouselConfirmedAt) { alert("先喺 Step 5 確認 Carousel。"); return; }
       const btn = document.getElementById("ai-gen-image-prompts");
-      if (btn) { btn.disabled = true; btn.textContent = "生成中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(imagePromptPrompt(r), IMAGE_PROMPT_SCHEMA);
+        const data = await callGemini(imagePromptPrompt(r), IMAGE_PROMPT_SCHEMA, { signal: loading.signal });
         r.imagePrompts = (Array.isArray(data.prompts) ? data.prompts : []).map((p) => ({
           slideIndex: Number(p.slideIndex) || 0,
           prompt: p.prompt || ""
@@ -1545,7 +1586,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.imagePrompts?.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.imagePrompts?.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt");
       }
     }
 
@@ -1617,9 +1659,9 @@
       if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
       if (!r.scriptText || !r.scriptText.trim()) { alert("請先生成或填腳本。"); return; }
       const btn = document.getElementById("ai-review-script");
-      if (btn) { btn.disabled = true; btn.textContent = "檢查中…"; }
+      const loading = bindAiBtnLoading(btn, "生成中…");
       try {
-        const data = await callGemini(reviewPrompt(r), REVIEW_SCHEMA);
+        const data = await callGemini(reviewPrompt(r), REVIEW_SCHEMA, { signal: loading.signal });
         r.scriptReview = {
           issues: Array.isArray(data.issues) ? data.issues : [],
           polishedScript: data.polishedScript || "",
@@ -1632,7 +1674,8 @@
       } catch (e) {
         handleAiError(e);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = (activeReel()?.scriptReview ? "重新檢查腳本" : "AI 檢查腳本"); }
+        loading.stop();
+        if (btn) btn.textContent = (activeReel()?.scriptReview ? "重新檢查腳本" : "AI 檢查腳本");
       }
     }
 
