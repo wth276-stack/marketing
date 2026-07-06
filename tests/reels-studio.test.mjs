@@ -8,6 +8,10 @@ async function readHtml() {
   return readFile(htmlPath, "utf8");
 }
 
+async function readSw() {
+  return "";
+}
+
 test("reels-studio exposes required standalone app structure", async () => {
   const html = await readHtml();
 
@@ -549,4 +553,22 @@ test("reels-studio Step 6 圖片生成 prompt", async () => {
   assert.match(html, /自然光/);
   assert.match(html, /4:5/);
   assert.match(html, /Midjourney \/ 即夢 \/ Imagen/);
+});
+
+test("reels-studio 數據安全：saveReels 失敗處理 + toast + cross-tab sync", async () => {
+  const html = await readHtml();
+  const sw = await readSw();
+  // toast helper + element
+  assert.match(html, /function showToast\(/);
+  assert.match(html, /id="app-toast"/);
+  // saveReels try/catch + quota handling
+  assert.match(html, /function isQuotaError\(/);
+  assert.match(html, /try\s*\{\s*localStorage\.setItem\(STORAGE/);
+  assert.match(html, /QuotaExceededError/);
+  assert.match(html, /空間不足/);
+  // saveReels returns boolean
+  assert.match(html, /function saveReels\(state\)\s*\{[\s\S]*?return\s+(true|false)/);
+  // cross-tab storage listener
+  assert.match(html, /addEventListener\(\s*["']storage["']/);
+  assert.match(html, /另一分頁更新咗/);
 });

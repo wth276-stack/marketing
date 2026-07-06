@@ -125,10 +125,15 @@
     .asset-note { width: 100%; min-height: 50px; font: inherit; resize: vertical; box-sizing: border-box; }
     .confirm-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
     .confirm-bar button { padding: 6px 12px; }
+    .app-toast { position: fixed; top: 16px; right: 16px; z-index: 9999; max-width: 320px; padding: 10px 14px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); background: #2a2230; color: #fff; cursor: pointer; }
+    .app-toast.error { background: #b3261e; }
+    .app-toast.update { background: #c96b8a; }
+    .app-toast.info { background: #2a2230; }
   </style>
 </head>
 <body>
   <p id="privacy">⚠️ 私隱提醒：唔好輸入客人全名、電話、完整對話或相片。</p>
+  <div id="app-toast" class="app-toast" hidden></div>
   <div class="app-shell">
     <aside id="reel-list">
       <div class="toolbar">
@@ -449,7 +454,19 @@
     }
 
     function saveReels(state) {
-      localStorage.setItem(STORAGE, JSON.stringify(state));
+      try {
+        localStorage.setItem(STORAGE, JSON.stringify(state));
+        return true;
+      } catch (e) {
+        if (isQuotaError(e)) {
+          showToast("儲存失敗：瀏覽器空間不足，自動匯出備份中…", "error");
+          try { exportJson(); } catch {}
+          alert("localStorage 空間不足，已自動匯出備份。請清理舊 reel 或匯入備份後再繼續。");
+        } else {
+          showToast("儲存失敗，請再試", "error");
+        }
+        return false;
+      }
     }
 
     let state = loadReels();
@@ -499,6 +516,24 @@
     function escapeHtml(s) {
       return String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function isQuotaError(e) {
+      if (!e) return false;
+      if (e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014)) return true;
+      return /quota|storage|空間/i.test(String(e && (e.message || e) || ""));
+    }
+
+    let _toastTimer = null;
+    function showToast(msg, kind) {
+      const el = document.getElementById("app-toast");
+      if (!el) { alert(msg); return; }
+      el.textContent = msg;
+      el.className = "app-toast " + (kind || "info");
+      el.hidden = false;
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => { el.hidden = true; }, 2500);
+      el.onclick = () => { el.hidden = true; if (_toastTimer) clearTimeout(_toastTimer); };
     }
 
     function loadAiConfig() {
@@ -2377,6 +2412,19 @@
       renderReelList();
       renderPlan();
     }
+
+    window.addEventListener("storage", (ev) => {
+      if (ev.key !== STORAGE) return;
+      if (ev.newValue === null) return;
+      try {
+        state = normalize(JSON.parse(ev.newValue));
+        renderReelList();
+        renderPlan();
+        renderShootChecklist();
+        renderReview();
+        showToast("另一分頁更新咗資料，已同步", "info");
+      } catch {}
+    });
 
     document.getElementById("new-reel").addEventListener("click", addReel);
     document.getElementById("open-idea-batch").addEventListener("click", () => {
