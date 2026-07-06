@@ -437,7 +437,7 @@ test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () =>
   }
   // generate
   assert.match(html, /function generateAiIdeas\(/);
-  assert.match(html, /callGemini\(ideaBatchPrompt\(topic, coreHint\), IDEA_BATCH_SCHEMA\)/);
+  assert.match(html, /callGemini\(ideaBatchPrompt\(topic, coreHint\), IDEA_BATCH_SCHEMA[^)]*\)/);
   assert.match(html, /state\.ideaDrafts = .*\.map\(\(idea\) =>/);
   assert.match(html, /重新生成會拎走現有 idea 池/);
   // create reels from drafts
@@ -492,7 +492,7 @@ test("reels-studio Step 4 影片素材生成 prompt", async () => {
   assert.match(html, /function renderVideoPrompts\(/);
   assert.match(html, /function confirmVideoPrompts\(/);
   assert.match(html, /function copyVideoPrompts\(/);
-  assert.match(html, /callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA\)/);
+  assert.match(html, /callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA[^)]*\)/);
   for (const id of ["ai-gen-video-prompts", "video-prompt-list", "video-master-prompt", "confirm-video-prompts", "copy-video-prompts", "video-asset-note"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -517,7 +517,7 @@ test("reels-studio Step 5 Carousel post 內容", async () => {
   assert.match(html, /function regenerateCarousel\(/);
   assert.match(html, /function renderCarousel\(/);
   assert.match(html, /function confirmCarousel\(/);
-  assert.match(html, /callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA\)/);
+  assert.match(html, /callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA[^)]*\)/);
   for (const id of ["ai-gen-carousel", "carousel-slides", "carousel-add", "confirm-carousel"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -542,7 +542,7 @@ test("reels-studio Step 6 圖片生成 prompt", async () => {
   assert.match(html, /function renderImagePrompts\(/);
   assert.match(html, /function confirmImagePrompts\(/);
   assert.match(html, /function copyImagePrompts\(/);
-  assert.match(html, /callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA\)/);
+  assert.match(html, /callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA[^)]*\)/);
   for (const id of ["ai-gen-image-prompts", "image-prompt-list", "confirm-image-prompts", "copy-image-prompts", "image-asset-note"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -605,4 +605,52 @@ test("reels-studio Service Worker 註冊 + 更新提示", async () => {
   assert.match(html, /updatefound/);
   assert.match(html, /有新版本，重新整理/);
   assert.match(html, /reg\.update\(\)/);
+});
+
+test("reels-studio callGemini timeout + retry + opts", async () => {
+  const html = await readHtml();
+  assert.match(html, /const GEMINI_TIMEOUT_MS = 60000/);
+  assert.match(html, /const GEMINI_MAX_RETRIES = 2/);
+  assert.match(html, /function sleep\(/);
+  // retry loop
+  assert.match(html, /for\s*\(\s*let attempt\s*=\s*0;\s*attempt\s*<=\s*GEMINI_MAX_RETRIES/);
+  assert.match(html, /AbortController/);
+  assert.match(html, /AbortSignal\.any/);
+  // opts 參數
+  assert.match(html, /async function callGemini\(promptText,\s*responseSchema,\s*opts\)/);
+  assert.match(html, /opts\.signal/);
+  assert.match(html, /opts\.onProgress/);
+  // 新錯誤 type
+  assert.match(html, /["']timeout["']/);
+  assert.match(html, /type:\s*["']cancelled["']/);
+  // retry backoff
+  assert.match(html, /sleep\(500\s*\*\s*Math\.pow\(2,\s*attempt\)\)/);
+});
+
+test("reels-studio AI 進度反饋 + 可取消（9 個 generate）", async () => {
+  const html = await readHtml();
+  assert.match(html, /function bindAiBtnLoading\(/);
+  assert.match(html, /ai-btn-loading/);
+  assert.match(html, /ai-cancel-btn/);
+  assert.match(html, /@keyframes ai-spin/);
+  assert.match(html, /生成中… 0s/);
+  // 9 個 generate 都用 bindAiBtnLoading
+  const btnIds = ["ai-generate-hooks", "ai-generate-options", "gen-directions", "ai-generate-ideas", "ai-generate-content", "ai-gen-video-prompts", "ai-gen-carousel", "ai-gen-image-prompts", "ai-review-script"];
+  for (const id of btnIds) {
+    assert.match(html, new RegExp('getElementById\\("' + id + '"\\)'));
+  }
+  // handleAiError 新分支
+  assert.match(html, /e\.type\s*===\s*["']cancelled["']/);
+  assert.match(html, /e\.type\s*===\s*["']timeout["']/);
+  assert.match(html, /等太耐，請再試/);
+});
+
+test("reels-studio 已儲存 indicator", async () => {
+  const html = await readHtml();
+  assert.match(html, /function showSavedIndicator\(/);
+  assert.match(html, /id="saved-indicator"/);
+  assert.match(html, /已儲存/);
+  assert.match(html, /\.saved-indicator/);
+  // saveReels 成功後 call showSavedIndicator
+  assert.match(html, /showSavedIndicator\(\)/);
 });
