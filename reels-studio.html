@@ -673,25 +673,60 @@
       localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
     }
 
-    async function callGemini(promptText, responseSchema) {
+    const GEMINI_TIMEOUT_MS = 60000;
+    const GEMINI_MAX_RETRIES = 2;
+
+    function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+    async function callGemini(promptText, responseSchema, opts) {
+      opts = opts || {};
       const cfg = loadAiConfig();
       if (!cfg.apiKey) throw { type: "no-key" };
       const url = GEMINI_ENDPOINT + encodeURIComponent(cfg.model) + ":generateContent?key=" + encodeURIComponent(cfg.apiKey);
       const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig: { responseMimeType: "application/json" } };
       if (responseSchema) body.generationConfig.responseSchema = responseSchema;
-      let resp;
-      try {
-        resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      } catch {
-        throw { type: "network" };
+      const startTime = Date.now();
+      let progressTimer = null;
+      if (typeof opts.onProgress === "function") {
+        progressTimer = setInterval(() => { opts.onProgress(Math.floor((Date.now() - startTime) / 1000)); }, 1000);
       }
-      if (resp.status === 401 || resp.status === 403) throw { type: "auth" };
-      if (resp.status === 429) throw { type: "quota" };
-      if (!resp.ok) throw { type: "network" };
-      let data;
-      try { data = await resp.json(); } catch { throw { type: "network" }; }
-      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      try { return JSON.parse(raw); } catch { throw { type: "parse", raw }; }
+      let lastErr = null;
+      try {
+        for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
+          if (opts.signal && opts.signal.aborted) throw { type: "cancelled" };
+          const internal = new AbortController();
+          const timeoutId = setTimeout(() => internal.abort(), GEMINI_TIMEOUT_MS);
+          let signal = internal.signal;
+          if (opts.signal) {
+            if (typeof AbortSignal !== "undefined" && AbortSignal.any) {
+              signal = AbortSignal.any([internal.signal, opts.signal]);
+            } else {
+              opts.signal.addEventListener("abort", () => internal.abort());
+            }
+          }
+          let resp;
+          try {
+            resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+          } catch (e) {
+            clearTimeout(timeoutId);
+            if (opts.signal && opts.signal.aborted) throw { type: "cancelled" };
+            lastErr = { type: internal.signal.aborted ? "timeout" : "network" };
+            if (attempt < GEMINI_MAX_RETRIES) { await sleep(500 * Math.pow(2, attempt)); continue; }
+            throw lastErr;
+          }
+          clearTimeout(timeoutId);
+          if (resp.status === 401 || resp.status === 403) throw { type: "auth" };
+          if (resp.status === 429) throw { type: "quota" };
+          if (!resp.ok) { lastErr = { type: "network" }; if (attempt < GEMINI_MAX_RETRIES) { await sleep(500 * Math.pow(2, attempt)); continue; } throw lastErr; }
+          let data;
+          try { data = await resp.json(); } catch { lastErr = { type: "network" }; if (attempt < GEMINI_MAX_RETRIES) { await sleep(500 * Math.pow(2, attempt)); continue; } throw lastErr; }
+          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          try { return JSON.parse(raw); } catch { lastErr = { type: "parse", raw }; if (attempt < GEMINI_MAX_RETRIES) { await sleep(500 * Math.pow(2, attempt)); continue; } throw lastErr; }
+        }
+        throw lastErr || { type: "network" };
+      } finally {
+        if (progressTimer) clearInterval(progressTimer);
+      }
     }
 
     function handleAiError(e) {

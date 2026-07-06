@@ -606,3 +606,23 @@ test("reels-studio Service Worker 註冊 + 更新提示", async () => {
   assert.match(html, /有新版本，重新整理/);
   assert.match(html, /reg\.update\(\)/);
 });
+
+test("reels-studio callGemini timeout + retry + opts", async () => {
+  const html = await readHtml();
+  assert.match(html, /const GEMINI_TIMEOUT_MS = 60000/);
+  assert.match(html, /const GEMINI_MAX_RETRIES = 2/);
+  assert.match(html, /function sleep\(/);
+  // retry loop
+  assert.match(html, /for\s*\(\s*let attempt\s*=\s*0;\s*attempt\s*<=\s*GEMINI_MAX_RETRIES/);
+  assert.match(html, /AbortController/);
+  assert.match(html, /AbortSignal\.any/);
+  // opts 參數
+  assert.match(html, /async function callGemini\(promptText,\s*responseSchema,\s*opts\)/);
+  assert.match(html, /opts\.signal/);
+  assert.match(html, /opts\.onProgress/);
+  // 新錯誤 type
+  assert.match(html, /["']timeout["']/);
+  assert.match(html, /type:\s*["']cancelled["']/);
+  // retry backoff
+  assert.match(html, /sleep\(500\s*\*\s*Math\.pow\(2,\s*attempt\)\)/);
+});
