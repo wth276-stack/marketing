@@ -361,9 +361,10 @@ test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
   assert.match(sw, /jessi-workflow-cache-v21/);
-  assert.match(html, /const REEL_SCHEMA_VERSION = 4/);
+  assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function migrateReelToV4\(/);
+  assert.match(html, /function migrateReelToV5\(/);
   assert.match(html, /function inferWizardStep\(/);
   assert.match(html, /reelsSchemaVersion/);
   assert.match(html, /r\.wizardStep - 1/);
@@ -653,4 +654,38 @@ test("reels-studio 已儲存 indicator", async () => {
   assert.match(html, /\.saved-indicator/);
   // saveReels 成功後 call showSavedIndicator
   assert.match(html, /showSavedIndicator\(\)/);
+});
+
+test("reels-studio 狀態機 + 可點擊 status badge", async () => {
+  const html = await readHtml();
+  assert.match(html, /const REEL_STATUSES = \[/);
+  assert.match(html, /const STATUS_LABELS = \{/);
+  assert.match(html, /const STATUS_COLORS = \{/);
+  assert.match(html, /function canTransition\(/);
+  // 7 狀態全數出現
+  for (const s of ["planning", "readyShoot", "shooting", "readyEdit", "readyPublish", "published", "scored"]) {
+    assert.match(html, new RegExp('"' + s + '"'));
+  }
+  // 中文 label
+  assert.match(html, /策劃/);
+  assert.match(html, /待拍/);
+  assert.match(html, /拍攝中/);
+  assert.match(html, /待剪/);
+  assert.match(html, /待發佈/);
+  assert.match(html, /已發佈/);
+  assert.match(html, /已復盤/);
+  // schema version 5 + migrate
+  assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
+  assert.match(html, /function migrateReelToV5\(/);
+  // renderReelList 用 badge
+  assert.match(html, /class="status-badge"/);
+  assert.match(html, /function renderStatusPicker\(/);
+  assert.match(html, /id="status-picker"/);
+  // canTransition 用 indexOf 相鄰
+  assert.match(html, /Math\.abs\(i\s*-\s*j\)\s*===\s*1/);
+  // status default 喺 normalize
+  assert.match(html, /REEL_STATUSES\.includes\(merged\.status\)/);
+  // CSS
+  assert.match(html, /\.status-badge/);
+  assert.match(html, /\.status-picker/);
 });

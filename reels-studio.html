@@ -136,6 +136,20 @@
     .ai-cancel-btn:hover { background: #9a211a; }
     .saved-indicator { position: fixed; bottom: 16px; right: 16px; z-index: 9998; padding: 6px 12px; border-radius: 6px; font-size: 13px; background: #2e7d32; color: #fff; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
     .saved-indicator.show { opacity: 1; }
+    .status-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 11px; color: #fff; cursor: pointer; background: #7a6f7a; }
+    .status-badge[data-status="readyShoot"] { background: #c96b8a; }
+    .status-badge[data-status="shooting"] { background: #e8a33d; }
+    .status-badge[data-status="readyEdit"] { background: #8a5cd8; }
+    .status-badge[data-status="readyPublish"] { background: #3d8ae8; }
+    .status-badge[data-status="published"] { background: #2e7d32; }
+    .status-badge[data-status="scored"] { background: #5a5a5a; }
+    .status-badge:hover { opacity: .85; }
+    .status-picker { position: absolute; z-index: 9999; background: #fff; border: 1px solid var(--rose); border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.15); display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+    .status-picker-title { font-size: 12px; color: #7a6f7a; margin-bottom: 2px; }
+    .status-picker-empty { font-size: 12px; color: #7a6f7a; padding: 4px; }
+    .status-pick-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+    .status-pick-btn:hover { background: #fdeaf1; border-color: var(--rose); }
+    .status-pick-close { padding: 4px 10px; border: 0; border-radius: 6px; background: #eee; cursor: pointer; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -210,7 +224,34 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
-    const REEL_SCHEMA_VERSION = 4;
+    const REEL_SCHEMA_VERSION = 5;
+
+    const REEL_STATUSES = ["planning", "readyShoot", "shooting", "readyEdit", "readyPublish", "published", "scored"];
+    const STATUS_LABELS = {
+      planning: "策劃",
+      readyShoot: "待拍",
+      shooting: "拍攝中",
+      readyEdit: "待剪",
+      readyPublish: "待發佈",
+      published: "已發佈",
+      scored: "已復盤"
+    };
+    const STATUS_COLORS = {
+      planning: "#7a6f7a",
+      readyShoot: "#c96b8a",
+      shooting: "#e8a33d",
+      readyEdit: "#8a5cd8",
+      readyPublish: "#3d8ae8",
+      published: "#2e7d32",
+      scored: "#5a5a5a"
+    };
+
+    function canTransition(from, to) {
+      const i = REEL_STATUSES.indexOf(from);
+      const j = REEL_STATUSES.indexOf(to);
+      if (i < 0 || j < 0) return false;
+      return Math.abs(i - j) === 1;
+    }
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -391,6 +432,22 @@
       return out;
     }
 
+    function migrateReelToV5(r) {
+      const out = { ...r };
+      if (!REEL_STATUSES.includes(out.status)) out.status = "planning";
+      if (typeof out.publishedUrl !== "string") out.publishedUrl = "";
+      if (typeof out.publishedPlatform !== "string") out.publishedPlatform = "";
+      if (out.views === undefined || out.views === null) out.views = null;
+      if (out.likes === undefined || out.likes === null) out.likes = null;
+      if (out.saves === undefined || out.saves === null) out.saves = null;
+      if (out.comments === undefined || out.comments === null) out.comments = null;
+      if (typeof out.videoAssetUrl !== "string") out.videoAssetUrl = "";
+      if (typeof out.videoAssetStatus !== "string") out.videoAssetStatus = "待生成";
+      if (typeof out.imageAssetUrl !== "string") out.imageAssetUrl = "";
+      if (typeof out.imageAssetStatus !== "string") out.imageAssetStatus = "待生成";
+      return out;
+    }
+
     function normalize(state) {
       if (!state || typeof state !== "object") state = { reels: [], activeReelId: null };
       if (!Array.isArray(state.reels)) state.reels = [];
@@ -402,9 +459,14 @@
         state.reels = state.reels.map((r) => migrateReelToV4(r));
         state.reelsSchemaVersion = 4;
       }
+      if (state.reelsSchemaVersion < 5) {
+        state.reels = state.reels.map((r) => migrateReelToV5(r));
+        state.reelsSchemaVersion = 5;
+      }
       state.reels = state.reels.map((r) => {
         const base = newReel();
         const merged = { ...base, ...r };
+        if (!REEL_STATUSES.includes(merged.status)) merged.status = "planning";
         merged.checklist = { ...base.checklist, ...(r.checklist || {}) };
         merged.score = { ...base.score, ...(r.score || {}) };
         if (!Array.isArray(merged.segments) || !merged.segments.length) {
@@ -515,7 +577,7 @@
           (r) =>
             `<div class="reel-item${r.id === state.activeReelId ? " active" : ""}" data-id="${r.id}">` +
             `<div style="font-weight:700">${escapeHtml(r.title || "（未命名）")}</div>` +
-            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · ${r.status}</div>` +
+            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · <span class="status-badge" data-status="${r.status}" data-id="${r.id}" title="撳切換狀態">${STATUS_LABELS[r.status] || r.status}</span></div>` +
             `</div>`
         )
         .join("");
@@ -529,6 +591,43 @@
           renderReview();
         });
       });
+      box.querySelectorAll(".status-badge").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const r = state.reels.find((x) => x.id === el.dataset.id);
+          if (r) renderStatusPicker(r, el);
+        });
+      });
+    }
+
+    function renderStatusPicker(r, anchorEl) {
+      const existing = document.getElementById("status-picker");
+      if (existing) existing.remove();
+      const opts = REEL_STATUSES.filter((s) => s !== r.status && canTransition(r.status, s));
+      const wrap = document.createElement("div");
+      wrap.innerHTML =
+        `<div id="status-picker" class="status-picker">` +
+        `<div class="status-picker-title">轉去：</div>` +
+        (opts.length
+          ? opts.map((s) => `<button type="button" class="status-pick-btn" data-status="${s}">${STATUS_LABELS[s]}</button>`).join("")
+          : `<div class="status-picker-empty">已到盡頭，冇可切換狀態。</div>`) +
+        `<button type="button" class="status-pick-close">取消</button>` +
+        `</div>`;
+      const pop = wrap.firstElementChild;
+      document.body.appendChild(pop);
+      const rect = anchorEl.getBoundingClientRect();
+      pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+      pop.style.left = (rect.left + window.scrollX) + "px";
+      pop.querySelectorAll(".status-pick-btn").forEach((b) => {
+        b.addEventListener("click", () => {
+          r.status = b.dataset.status;
+          r.updatedAt = new Date().toISOString();
+          saveReels(state);
+          pop.remove();
+          renderReelList();
+        });
+      });
+      pop.querySelector(".status-pick-close").addEventListener("click", () => pop.remove());
     }
 
     function escapeHtml(s) {
