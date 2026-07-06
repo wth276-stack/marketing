@@ -134,11 +134,14 @@
     @keyframes ai-spin { to { transform: rotate(360deg); } }
     .ai-cancel-btn { margin-left: 8px; padding: 4px 12px; font-size: 13px; background: #b3261e; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
     .ai-cancel-btn:hover { background: #9a211a; }
+    .saved-indicator { position: fixed; bottom: 16px; right: 16px; z-index: 9998; padding: 6px 12px; border-radius: 6px; font-size: 13px; background: #2e7d32; color: #fff; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+    .saved-indicator.show { opacity: 1; }
   </style>
 </head>
 <body>
   <p id="privacy">⚠️ 私隱提醒：唔好輸入客人全名、電話、完整對話或相片。</p>
   <div id="app-toast" class="app-toast" hidden></div>
+  <div id="saved-indicator" class="saved-indicator" hidden>✓ 已儲存</div>
   <div class="app-shell">
     <aside id="reel-list">
       <div class="toolbar">
@@ -470,6 +473,7 @@
       try {
         localStorage.setItem(STORAGE, JSON.stringify(state));
         scheduleBackup();
+        showSavedIndicator();
         return true;
       } catch (e) {
         if (isQuotaError(e)) {
@@ -548,6 +552,16 @@
       if (_toastTimer) clearTimeout(_toastTimer);
       _toastTimer = setTimeout(() => { el.hidden = true; }, 2500);
       el.onclick = () => { el.hidden = true; if (_toastTimer) clearTimeout(_toastTimer); };
+    }
+
+    let _savedTimer = null;
+    function showSavedIndicator() {
+      const el = document.getElementById("saved-indicator");
+      if (!el) return;
+      el.hidden = false;
+      el.classList.add("show");
+      if (_savedTimer) clearTimeout(_savedTimer);
+      _savedTimer = setTimeout(() => { el.classList.remove("show"); setTimeout(() => { el.hidden = true; }, 250); }, 1000);
     }
 
     const BACKUP_DB = "jessi-reels-backup";

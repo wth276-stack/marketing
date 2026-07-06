@@ -644,3 +644,13 @@ test("reels-studio AI 進度反饋 + 可取消（9 個 generate）", async () =>
   assert.match(html, /e\.type\s*===\s*["']timeout["']/);
   assert.match(html, /等太耐，請再試/);
 });
+
+test("reels-studio 已儲存 indicator", async () => {
+  const html = await readHtml();
+  assert.match(html, /function showSavedIndicator\(/);
+  assert.match(html, /id="saved-indicator"/);
+  assert.match(html, /已儲存/);
+  assert.match(html, /\.saved-indicator/);
+  // saveReels 成功後 call showSavedIndicator
+  assert.match(html, /showSavedIndicator\(\)/);
+});
