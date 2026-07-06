@@ -8,8 +8,10 @@ async function readHtml() {
   return readFile(htmlPath, "utf8");
 }
 
+const swPath = new URL("../jessi-workflow-sw.js", import.meta.url);
+
 async function readSw() {
-  return "";
+  return readFile(swPath, "utf8");
 }
 
 test("reels-studio exposes required standalone app structure", async () => {
