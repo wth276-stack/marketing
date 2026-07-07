@@ -183,6 +183,8 @@
       <div class="toolbar">
         <button type="button" class="primary" id="new-reel">+ 新增 Reel</button>
         <button type="button" id="open-idea-batch">批量出 Idea</button>
+        <button type="button" id="save-template">存做模板</button>
+        <button type="button" id="new-from-template">由模板開新</button>
         <button type="button" id="duplicate-reel">複製</button>
         <button type="button" id="delete-reel">刪除</button>
       </div>
@@ -206,6 +208,7 @@
         </select>
       </div>
       <div id="reel-items"></div>
+      <div id="template-library-panel" class="idea-batch-panel" hidden></div>
       <div id="idea-batch-panel" class="idea-batch-panel" hidden>
         <div class="field"><label>主題</label><input id="idea-batch-topic" placeholder="例如 HIFU / 夏日控油 / 產後修腹"></div>
         <div class="field"><label>重點提示（選填）</label><input id="idea-batch-core" placeholder="想強調嘅角度或賣點，可唔填"></div>
@@ -575,6 +578,8 @@
         state.activeReelId = state.reels[0]?.id || null;
       }
       if (!state.activeReelId && state.reels.length) state.activeReelId = state.reels[0].id;
+      if (!Array.isArray(state.templates)) state.templates = [];
+      if (!state.templatesSchemaVersion) state.templatesSchemaVersion = 1;
       return state;
     }
 
@@ -2828,6 +2833,106 @@
       renderReview();
     }
 
+    function saveReelAsTemplate() {
+      const r = activeReel();
+      if (!r) { alert("請先揀選一條 Reel。"); return; }
+      const tpl = JSON.parse(JSON.stringify(r));
+      tpl.id = uid();
+      tpl.name = (r.title || "未命名") + "（模板）";
+      tpl.category = "";
+      tpl.createdAt = new Date().toISOString();
+      tpl.updatedAt = tpl.createdAt;
+      tpl.status = "planning";
+      tpl.wizardStep = 0;
+      tpl.hookCandidates = [];
+      tpl.hookCandidatesAt = null;
+      tpl.interactionGoal = "";
+      tpl.scriptReview = null;
+      tpl.scriptReviewAt = null;
+      tpl.videoPrompts = [];
+      tpl.videoMasterPrompt = "";
+      tpl.videoOverallStyle = "";
+      tpl.videoPromptAt = null;
+      tpl.videoAssetUrl = "";
+      tpl.videoAssetStatus = "待生成";
+      tpl.videoAssetNote = "";
+      tpl.carousel = [];
+      tpl.carouselAt = null;
+      tpl.carouselConfirmedAt = null;
+      tpl.imagePrompts = [];
+      tpl.imagePromptAt = null;
+      tpl.imageAssetUrl = "";
+      tpl.imageAssetStatus = "待生成";
+      tpl.imageAssetNote = "";
+      tpl.publishedUrl = "";
+      tpl.publishedPlatform = "";
+      tpl.publishedAt = null;
+      tpl.views = null;
+      tpl.likes = null;
+      tpl.saves = null;
+      tpl.comments = null;
+      state.templates.push(tpl);
+      saveReels(state);
+      renderTemplateLibrary();
+      alert("已存做模板：" + tpl.name);
+    }
+
+    function newReelFromTemplate(tplId) {
+      const tpl = state.templates.find((t) => t.id === tplId);
+      if (!tpl) return;
+      const copy = newReel();
+      Object.assign(copy, JSON.parse(JSON.stringify(tpl)));
+      copy.id = uid();
+      copy.title = (tpl.name || "未命名").replace(/（模板）$/, "");
+      copy.createdAt = new Date().toISOString();
+      copy.updatedAt = copy.createdAt;
+      copy.status = "planning";
+      copy.wizardStep = 0;
+      state.reels.push(copy);
+      state.activeReelId = copy.id;
+      saveReels(state);
+      renderReelList();
+      renderPlan();
+      renderShootChecklist();
+      renderReview();
+    }
+
+    function deleteTemplate(tplId) {
+      const tpl = state.templates.find((t) => t.id === tplId);
+      if (!tpl) return;
+      if (!confirm("刪除模板「" + (tpl.name || "未命名") + "」？")) return;
+      state.templates = state.templates.filter((t) => t.id !== tplId);
+      saveReels(state);
+      renderTemplateLibrary();
+    }
+
+    function renderTemplateLibrary() {
+      const box = document.getElementById("template-library-panel");
+      if (!box) return;
+      const templates = Array.isArray(state.templates) ? state.templates : [];
+      if (!templates.length) {
+        box.innerHTML = '<p class="idea-empty">模板庫係空，喺上方撞一條 reel 再撳「存做模板」。</p>';
+        return;
+      }
+      box.innerHTML = '<div class="idea-group-title">模板庫（' + templates.length + '）</div>' +
+        templates.map((t) =>
+          '<div class="tpl-card" data-id="' + escapeHtml(t.id) + '">' +
+          '<div class="idea-draft-title">' + escapeHtml(t.name || "未命名") + '</div>' +
+          '<div class="idea-draft-core">' + escapeHtml(t.coreMessage || "") + '</div>' +
+          '<div class="tpl-actions">' +
+          '<button type="button" class="tpl-use primary">用呢個開新</button>' +
+          '<button type="button" class="tpl-del">刪除</button>' +
+          '</div></div>'
+        ).join("");
+      box.querySelectorAll(".tpl-card").forEach((card) => {
+        const id = card.dataset.id;
+        const useBtn = card.querySelector(".tpl-use");
+        if (useBtn) useBtn.addEventListener("click", () => newReelFromTemplate(id));
+        const delBtn = card.querySelector(".tpl-del");
+        if (delBtn) delBtn.addEventListener("click", () => deleteTemplate(id));
+      });
+    }
+
     function checklistPct(r) {
       const done = CHECKLIST_KEYS.filter((k) => r.checklist[k]).length;
       return Math.round((done / CHECKLIST_KEYS.length) * 100);
@@ -2963,6 +3068,13 @@
     document.getElementById("import-json").addEventListener("change", importJsonFile);
     document.getElementById("delete-reel").addEventListener("click", deleteReel);
     document.getElementById("duplicate-reel").addEventListener("click", duplicateReel);
+    document.getElementById("save-template").addEventListener("click", saveReelAsTemplate);
+    const newFromTplBtn = document.getElementById("new-from-template");
+    if (newFromTplBtn) newFromTplBtn.addEventListener("click", () => {
+      const panel = document.getElementById("template-library-panel");
+      if (panel) { panel.hidden = !panel.hidden; if (!panel.hidden) renderTemplateLibrary(); }
+    });
+    renderTemplateLibrary();
     (function initAiSettings() {
       const cfg = loadAiConfig();
       const keyEl = document.getElementById("ai-api-key");

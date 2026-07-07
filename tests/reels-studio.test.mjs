@@ -825,3 +825,23 @@ test("reels-studio 批4 #16 runAiGenerate helper", async () => {
   assert.match(html, /function regenerateImagePrompts/);
   assert.match(html, /function regenerateReview/);
 });
+
+test("reels-studio 批4 #11 template library", async () => {
+  const html = await readHtml();
+  // state.templates normalize
+  assert.match(html, /state\.templatesSchemaVersion/);
+  assert.match(html, /if \(!Array\.isArray\(state\.templates\)\) state\.templates = \[\]/);
+  // 4 個函式
+  assert.match(html, /function saveReelAsTemplate\(/);
+  assert.match(html, /function newReelFromTemplate\(/);
+  assert.match(html, /function deleteTemplate\(/);
+  assert.match(html, /function renderTemplateLibrary\(/);
+  // toolbar 掣 + panel
+  assert.match(html, /id="save-template"/);
+  assert.match(html, /id="new-from-template"/);
+  assert.match(html, /id="template-library-panel"/);
+  // 中文字串
+  assert.match(html, /存做模板/);
+  assert.match(html, /由模板開新/);
+  assert.match(html, /模板庫/);
+});
