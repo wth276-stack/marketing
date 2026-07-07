@@ -1125,7 +1125,9 @@
           r2.hook = r2.hookCandidates[i].text;
           r2.updatedAt = new Date().toISOString();
           saveReels(state);
-          renderPlan();
+          renderHookCandidates();
+          const hookEl = document.getElementById("p-hook");
+          if (hookEl) hookEl.value = r2.hook;
         });
       });
     }
@@ -1169,16 +1171,67 @@
         }
         r2.updatedAt = new Date().toISOString();
         saveReels(state);
-        renderPlan();
+        renderCtaPicker();
       };
       variantSel.onchange = () => {
         const r2 = activeReel(); if (!r2) return;
         r2.cta = variantSel.value;
         r2.updatedAt = new Date().toISOString();
         saveReels(state);
-        renderPlan();
+        const ctaEl = document.getElementById("p-cta");
+        if (ctaEl) ctaEl.value = r2.cta;
       };
       syncType();
+    }
+
+    function renderSegList() {
+      const box = document.getElementById("seg-list");
+      if (!box) return;
+      const r = activeReel();
+      if (!r) return;
+      const segs = Array.isArray(r.segments) ? r.segments : [];
+      box.innerHTML = segs
+        .map(
+          (s, i) =>
+            `<div class="seg-row" data-i="${i}">
+              <input class="seg-label" placeholder="段落標題" value="${escapeHtml(s.label)}">
+              <input class="seg-shot" placeholder="畫面" value="${escapeHtml(s.shot)}">
+              <input class="seg-voice" placeholder="旁白" value="${escapeHtml(s.voiceover || "")}">
+              <input class="seg-sub" placeholder="字幕" value="${escapeHtml(s.subtitle || "")}">
+              <input class="seg-dur" type="number" min="0" placeholder="秒" value="${s.durationSec || 0}">
+              <input class="seg-note" placeholder="備註" value="${escapeHtml(s.note)}">
+              <button type="button" class="seg-del">✕</button>
+            </div>`
+        )
+        .join("");
+      box.querySelectorAll(".seg-row").forEach((row) => {
+        const i = Number(row.dataset.i);
+        const upd = () => {
+          const r2 = activeReel();
+          if (!r2 || !r2.segments[i]) return;
+          r2.segments[i] = {
+            label: row.querySelector(".seg-label").value,
+            shot: row.querySelector(".seg-shot").value,
+            voiceover: row.querySelector(".seg-voice").value,
+            subtitle: row.querySelector(".seg-sub").value,
+            durationSec: Number(row.querySelector(".seg-dur").value) || 0,
+            note: row.querySelector(".seg-note").value
+          };
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+        };
+        row.querySelectorAll("input").forEach((el) => el.addEventListener("input", upd));
+        const delBtn = row.querySelector(".seg-del");
+        if (delBtn) delBtn.addEventListener("click", () => {
+          const r2 = activeReel();
+          if (!r2) return;
+          r2.segments.splice(i, 1);
+          if (!r2.segments.length) r2.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+          renderSegList();
+        });
+      });
     }
 
     const STAGE_A_SCHEMA = {
@@ -1906,7 +1959,9 @@
       r.scriptText = r.scriptReview.polishedScript || "";
       r.updatedAt = new Date().toISOString();
       saveReels(state);
-      renderPlan();
+      const scriptEl = document.getElementById("p-script");
+      if (scriptEl) scriptEl.value = r.scriptText;
+      else renderPlan();
     }
 
     function applyPolishedCaption() {
@@ -1916,7 +1971,9 @@
       r.caption = r.scriptReview.polishedCaption || "";
       r.updatedAt = new Date().toISOString();
       saveReels(state);
-      renderPlan();
+      const captionEl = document.getElementById("p-caption");
+      if (captionEl) captionEl.value = r.caption;
+      else renderPlan();
     }
 
     function assembleCaption() {
@@ -1932,7 +1989,9 @@
       r.caption = parts.join("\n\n");
       r.updatedAt = new Date().toISOString();
       saveReels(state);
-      renderPlan();
+      const captionEl = document.getElementById("p-caption");
+      if (captionEl) captionEl.value = r.caption;
+      else renderPlan();
     }
 
     function copyCaption() {
@@ -2479,14 +2538,16 @@
         row.querySelector(".seg-del").addEventListener("click", () => {
           r.segments.splice(i, 1);
           if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+          r.updatedAt = new Date().toISOString();
           saveReels(state);
-          renderPlan();
+          renderSegList();
         });
       });
       panel.querySelector("#seg-add").addEventListener("click", () => {
         r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+        r.updatedAt = new Date().toISOString();
         saveReels(state);
-        renderPlan();
+        renderSegList();
       });
       const stepCur = r.wizardStep ?? 0;
       const prevBtn = panel.querySelector("#wiz-prev");

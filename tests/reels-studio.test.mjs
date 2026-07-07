@@ -845,3 +845,14 @@ test("reels-studio 批4 #11 template library", async () => {
   assert.match(html, /由模板開新/);
   assert.match(html, /模板庫/);
 });
+
+test("reels-studio 批4 #12 renderPlan 局部更新防 focus 跳", async () => {
+  const html = await readHtml();
+  // renderSegList 新局部 renderer
+  assert.match(html, /function renderSegList\(/);
+  // .use-hook click 改用 renderHookCandidates + sync #p-hook（唔再 renderPlan）
+  assert.match(html, /renderHookCandidates\(\);\s*const hookEl = document\.getElementById\("p-hook"\)/);
+  // applyPolishedScript / applyPolishedCaption / assembleCaption 改直接寫 textarea
+  assert.match(html, /const scriptEl = document\.getElementById\("p-script"\)/);
+  assert.match(html, /const captionEl = document\.getElementById\("p-caption"\)/);
+});
