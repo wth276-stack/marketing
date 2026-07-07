@@ -162,6 +162,10 @@
     .ov-chip[data-status="scored"] { background: #5a5a5a; }
     .reel-list-controls { padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #e8dfe5; }
     .reel-list-controls input, .reel-list-controls select { font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-radius: 6px; }
+    .publish-section { border: 1px solid #e8dfe5; border-radius: 8px; padding: 10px; margin-bottom: 12px; background: #faf6f8; }
+    .publish-section h4 { margin: 0 0 8px; font-size: 14px; color: var(--rose); }
+    .publish-engagement { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+    .pub-at { font-size: 13px; color: #5a505a; }
   </style>
 </head>
 <body>
@@ -403,6 +407,12 @@
         score: {},
         scoreNotes: "",
         publishedAt: null,
+        publishedUrl: "",
+        publishedPlatform: "",
+        views: null,
+        likes: null,
+        saves: null,
+        comments: null,
         aiOptions: null,
         aiPicks: { structure: null, angle: null, lengthSec: null, subtitleStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
@@ -690,7 +700,9 @@
       pop.style.left = (rect.left + window.scrollX) + "px";
       pop.querySelectorAll(".status-pick-btn").forEach((b) => {
         b.addEventListener("click", () => {
-          r.status = b.dataset.status;
+          const newStatus = b.dataset.status;
+          r.status = newStatus;
+          if (newStatus === "published" && !r.publishedAt) r.publishedAt = new Date().toISOString();
           r.updatedAt = new Date().toISOString();
           saveReels(state);
           pop.remove();
@@ -2607,6 +2619,20 @@
         panel.innerHTML = '<p style="color:#7a6f7a">請先新增或揀選一條 Reel。</p>';
         return;
       }
+      const platformOpts = ["", "Instagram", "Facebook", "TikTok", "小紅書", "其他"];
+      const publishSection =
+        `<div class="publish-section">
+          <h4>發佈資料</h4>
+          <div class="field"><label>發佈連結</label><input id="r-pub-url" type="url" placeholder="https://..." value="${escapeHtml(r.publishedUrl || "")}"></div>
+          <div class="field"><label>平台</label><select id="r-pub-platform">${platformOpts.map((p) => `<option value="${escapeHtml(p)}"${r.publishedPlatform === p ? " selected" : ""}>${p || "——"}</option>`).join("")}</select></div>
+          <div class="publish-engagement">
+            <div class="field"><label>Views</label><input id="r-pub-views" type="number" min="0" value="${r.views ?? ""}"></div>
+            <div class="field"><label>Likes</label><input id="r-pub-likes" type="number" min="0" value="${r.likes ?? ""}"></div>
+            <div class="field"><label>Saves</label><input id="r-pub-saves" type="number" min="0" value="${r.saves ?? ""}"></div>
+            <div class="field"><label>Comments</label><input id="r-pub-comments" type="number" min="0" value="${r.comments ?? ""}"></div>
+          </div>
+          <div class="field"><label>發佈日期</label><span class="pub-at">${r.publishedAt ? new Date(r.publishedAt).toLocaleString("zh-HK") : "未發佈"}</span></div>
+        </div>`;
       const rows = SCORE_KEYS
         .map(
           (k) =>
@@ -2618,9 +2644,27 @@
         )
         .join("");
       panel.innerHTML =
-        rows +
+        publishSection + rows +
         `<div class="field"><label>評分備註</label><textarea id="r-notes" rows="3">${escapeHtml(r.scoreNotes)}</textarea></div>` +
         `<button type="button" id="r-save" class="primary" style="padding:8px 14px;border-radius:8px;border:0;background:var(--rose);color:#fff;cursor:pointer">儲存評分</button>`;
+      const bindPub = (id, key) => {
+        const el = panel.querySelector(id);
+        if (!el) return;
+        const evt = (el.tagName === "SELECT" || el.type === "number") ? "input" : "input";
+        el.addEventListener(evt, () => {
+          const r2 = activeReel(); if (!r2) return;
+          if (el.type === "number") r2[key] = el.value === "" ? null : Number(el.value);
+          else r2[key] = el.value;
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+        });
+      };
+      bindPub("#r-pub-url", "publishedUrl");
+      bindPub("#r-pub-platform", "publishedPlatform");
+      bindPub("#r-pub-views", "views");
+      bindPub("#r-pub-likes", "likes");
+      bindPub("#r-pub-saves", "saves");
+      bindPub("#r-pub-comments", "comments");
       panel.querySelectorAll('input[type="range"]').forEach((el) => {
         el.addEventListener("input", () => {
           r.score[el.dataset.key] = Number(el.value);

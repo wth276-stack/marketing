@@ -713,3 +713,31 @@ test("reels-studio dashboard overview + search/filter/sort", async () => {
   assert.match(html, /Step \$\{/);
   assert.match(html, /\/7/);
 });
+
+test("reels-studio 發佈追蹤欄位 + 復盤 tab UI", async () => {
+  const html = await readHtml();
+  // 新欄位喺 newReel
+  assert.match(html, /publishedUrl:/);
+  assert.match(html, /publishedPlatform:/);
+  assert.match(html, /views:/);
+  assert.match(html, /likes:/);
+  assert.match(html, /saves:/);
+  assert.match(html, /comments:/);
+  // renderReview 發佈資料 section
+  assert.match(html, /發佈資料/);
+  assert.match(html, /id="r-pub-url"/);
+  assert.match(html, /id="r-pub-platform"/);
+  assert.match(html, /id="r-pub-views"/);
+  assert.match(html, /id="r-pub-likes"/);
+  assert.match(html, /id="r-pub-saves"/);
+  assert.match(html, /id="r-pub-comments"/);
+  // publishedAt auto-set on published transition
+  assert.match(html, /newStatus === "published"/);
+  assert.match(html, /r\.publishedAt = new Date\(\)\.toISOString\(\)/);
+  // CSS
+  assert.match(html, /\.publish-section/);
+  // platform 選項
+  assert.match(html, /Instagram/);
+  assert.match(html, /TikTok/);
+  assert.match(html, /小紅書/);
+});
