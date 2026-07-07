@@ -136,6 +136,42 @@
     .ai-cancel-btn:hover { background: #9a211a; }
     .saved-indicator { position: fixed; bottom: 16px; right: 16px; z-index: 9998; padding: 6px 12px; border-radius: 6px; font-size: 13px; background: #2e7d32; color: #fff; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
     .saved-indicator.show { opacity: 1; }
+    .status-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 11px; color: #fff; cursor: pointer; background: #7a6f7a; }
+    .status-badge[data-status="readyShoot"] { background: #c96b8a; }
+    .status-badge[data-status="shooting"] { background: #e8a33d; }
+    .status-badge[data-status="readyEdit"] { background: #8a5cd8; }
+    .status-badge[data-status="readyPublish"] { background: #3d8ae8; }
+    .status-badge[data-status="published"] { background: #2e7d32; }
+    .status-badge[data-status="scored"] { background: #5a5a5a; }
+    .status-badge:hover { opacity: .85; }
+    .status-picker { position: absolute; z-index: 9999; background: #fff; border: 1px solid var(--rose); border-radius: 8px; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.15); display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+    .status-picker-title { font-size: 12px; color: #7a6f7a; margin-bottom: 2px; }
+    .status-picker-empty { font-size: 12px; color: #7a6f7a; padding: 4px; }
+    .status-pick-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+    .status-pick-btn:hover { background: #fdeaf1; border-color: var(--rose); }
+    .status-pick-close { padding: 4px 10px; border: 0; border-radius: 6px; background: #eee; cursor: pointer; font-size: 12px; }
+    .reel-overview { padding: 6px 10px; font-size: 12px; color: #5a505a; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-bottom: 1px dashed #e8dfe5; }
+    .ov-total { font-weight: 700; color: #3a303a; }
+    .ov-chip { padding: 1px 6px; border-radius: 8px; font-size: 11px; color: #fff; }
+ .ov-chip[data-status="planning"] { background: #7a6f7a; }
+    .ov-chip[data-status="readyShoot"] { background: #c96b8a; }
+    .ov-chip[data-status="shooting"] { background: #e8a33d; }
+    .ov-chip[data-status="readyEdit"] { background: #8a5cd8; }
+    .ov-chip[data-status="readyPublish"] { background: #3d8ae8; }
+    .ov-chip[data-status="published"] { background: #2e7d32; }
+    .ov-chip[data-status="scored"] { background: #5a5a5a; }
+    .reel-list-controls { padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #e8dfe5; }
+    .reel-list-controls input, .reel-list-controls select { font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-radius: 6px; }
+    .publish-section { border: 1px solid #e8dfe5; border-radius: 8px; padding: 10px; margin-bottom: 12px; background: #faf6f8; }
+    .publish-section h4 { margin: 0 0 8px; font-size: 14px; color: var(--rose); }
+    .publish-engagement { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+    .pub-at { font-size: 13px; color: #5a505a; }
+    .asset-card { border: 1px solid #e8dfe5; border-radius: 8px; padding: 10px; margin-top: 8px; background: #faf6f8; }
+    .asset-card-actions { margin: 4px 0; }
+    .asset-card-actions button { padding: 4px 12px; border: 1px solid var(--rose); border-radius: 6px; background: #fff; color: var(--rose); cursor: pointer; font-size: 13px; }
+    .asset-card-actions button:hover { background: #fdeaf1; }
+    .asset-preview { margin: 6px 0; min-height: 0; }
+    .asset-preview img { max-width: 100%; max-height: 160px; border-radius: 6px; border: 1px solid #e8dfe5; }
   </style>
 </head>
 <body>
@@ -149,6 +185,25 @@
         <button type="button" id="open-idea-batch">批量出 Idea</button>
         <button type="button" id="duplicate-reel">複製</button>
         <button type="button" id="delete-reel">刪除</button>
+      </div>
+      <div id="reel-overview" class="reel-overview"></div>
+      <div class="reel-list-controls">
+        <input id="reel-search" type="search" placeholder="搵 reel（標題/結構）">
+        <select id="reel-status-filter">
+          <option value="all">全部狀態</option>
+          <option value="planning">策劃</option>
+          <option value="readyShoot">待拍</option>
+          <option value="shooting">拍攝中</option>
+          <option value="readyEdit">待剪</option>
+          <option value="readyPublish">待發佈</option>
+          <option value="published">已發佈</option>
+          <option value="scored">已復盤</option>
+        </select>
+        <select id="reel-sort">
+          <option value="updated">按更新時間</option>
+          <option value="created">按建立時間</option>
+          <option value="status">按狀態</option>
+        </select>
       </div>
       <div id="reel-items"></div>
       <div id="idea-batch-panel" class="idea-batch-panel" hidden>
@@ -210,7 +265,34 @@
     const STORAGE = "jessi-reels-studio-v1";
     const SHARED_CONTEXT_KEY = "jessi-shared-context";
     const SCHEMA_VERSION = 1;
-    const REEL_SCHEMA_VERSION = 4;
+    const REEL_SCHEMA_VERSION = 5;
+
+    const REEL_STATUSES = ["planning", "readyShoot", "shooting", "readyEdit", "readyPublish", "published", "scored"];
+    const STATUS_LABELS = {
+      planning: "策劃",
+      readyShoot: "待拍",
+      shooting: "拍攝中",
+      readyEdit: "待剪",
+      readyPublish: "待發佈",
+      published: "已發佈",
+      scored: "已復盤"
+    };
+    const STATUS_COLORS = {
+      planning: "#7a6f7a",
+      readyShoot: "#c96b8a",
+      shooting: "#e8a33d",
+      readyEdit: "#8a5cd8",
+      readyPublish: "#3d8ae8",
+      published: "#2e7d32",
+      scored: "#5a5a5a"
+    };
+
+    function canTransition(from, to) {
+      const i = REEL_STATUSES.indexOf(from);
+      const j = REEL_STATUSES.indexOf(to);
+      if (i < 0 || j < 0) return false;
+      return Math.abs(i - j) === 1;
+    }
     const CONFIG_KEY = "jessi-reels-gemini-config";
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -331,6 +413,12 @@
         score: {},
         scoreNotes: "",
         publishedAt: null,
+        publishedUrl: "",
+        publishedPlatform: "",
+        views: null,
+        likes: null,
+        saves: null,
+        comments: null,
         aiOptions: null,
         aiPicks: { structure: null, angle: null, lengthSec: null, subtitleStyle: null, ctaStyle: null, broll: null },
         aiGeneratedAt: null,
@@ -340,12 +428,16 @@
         videoOverallStyle: "",
         videoPromptAt: null,
         videoAssetNote: "",
+        videoAssetUrl: "",
+        videoAssetStatus: "待生成",
         carousel: [],
         carouselAt: null,
         carouselConfirmedAt: null,
         imagePrompts: [],
         imagePromptAt: null,
         imageAssetNote: "",
+        imageAssetUrl: "",
+        imageAssetStatus: "待生成",
         wizardStep: 0
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
@@ -391,6 +483,22 @@
       return out;
     }
 
+    function migrateReelToV5(r) {
+      const out = { ...r };
+      if (!REEL_STATUSES.includes(out.status)) out.status = "planning";
+      if (typeof out.publishedUrl !== "string") out.publishedUrl = "";
+      if (typeof out.publishedPlatform !== "string") out.publishedPlatform = "";
+      if (out.views === undefined || out.views === null) out.views = null;
+      if (out.likes === undefined || out.likes === null) out.likes = null;
+      if (out.saves === undefined || out.saves === null) out.saves = null;
+      if (out.comments === undefined || out.comments === null) out.comments = null;
+      if (typeof out.videoAssetUrl !== "string") out.videoAssetUrl = "";
+      if (typeof out.videoAssetStatus !== "string") out.videoAssetStatus = "待生成";
+      if (typeof out.imageAssetUrl !== "string") out.imageAssetUrl = "";
+      if (typeof out.imageAssetStatus !== "string") out.imageAssetStatus = "待生成";
+      return out;
+    }
+
     function normalize(state) {
       if (!state || typeof state !== "object") state = { reels: [], activeReelId: null };
       if (!Array.isArray(state.reels)) state.reels = [];
@@ -402,9 +510,14 @@
         state.reels = state.reels.map((r) => migrateReelToV4(r));
         state.reelsSchemaVersion = 4;
       }
+      if (state.reelsSchemaVersion < 5) {
+        state.reels = state.reels.map((r) => migrateReelToV5(r));
+        state.reelsSchemaVersion = 5;
+      }
       state.reels = state.reels.map((r) => {
         const base = newReel();
         const merged = { ...base, ...r };
+        if (!REEL_STATUSES.includes(merged.status)) merged.status = "planning";
         merged.checklist = { ...base.checklist, ...(r.checklist || {}) };
         merged.score = { ...base.score, ...(r.score || {}) };
         if (!Array.isArray(merged.segments) || !merged.segments.length) {
@@ -454,6 +567,10 @@
       });
       if (!Array.isArray(state.ideaDrafts)) state.ideaDrafts = [];
       if (!state.ideaBatchSchemaVersion) state.ideaBatchSchemaVersion = 1;
+      if (!state.reelListPrefs || typeof state.reelListPrefs !== "object") state.reelListPrefs = { q: "", statusFilter: "all", sort: "updated" };
+      if (typeof state.reelListPrefs.q !== "string") state.reelListPrefs.q = "";
+      if (typeof state.reelListPrefs.statusFilter !== "string") state.reelListPrefs.statusFilter = "all";
+      if (typeof state.reelListPrefs.sort !== "string") state.reelListPrefs.sort = "updated";
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
         state.activeReelId = state.reels[0]?.id || null;
       }
@@ -504,18 +621,43 @@
       renderReview();
     }
 
+    function renderOverview() {
+      const el = document.getElementById("reel-overview");
+      if (!el) return;
+      const counts = {};
+      for (const s of REEL_STATUSES) counts[s] = 0;
+      for (const r of state.reels) counts[r.status] = (counts[r.status] || 0) + 1;
+      const chips = REEL_STATUSES.filter((s) => counts[s] > 0)
+        .map((s) => `<span class="ov-chip" data-status="${s}">${STATUS_LABELS[s]} ${counts[s]}</span>`)
+        .join("");
+      el.innerHTML = `<span class="ov-total">${state.reels.length} 條 reel</span>${chips}`;
+    }
+
     function renderReelList() {
       const box = document.getElementById("reel-items");
+      renderOverview();
+      const prefs = state.reelListPrefs || { q: "", statusFilter: "all", sort: "updated" };
+      let list = state.reels.slice();
+      const q = (prefs.q || "").trim().toLowerCase();
+      if (q) list = list.filter((r) => (r.title || "").toLowerCase().includes(q) || (r.structure || "").toLowerCase().includes(q));
+      if (prefs.statusFilter && prefs.statusFilter !== "all") list = list.filter((r) => r.status === prefs.statusFilter);
+      if (prefs.sort === "created") list.sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+      else if (prefs.sort === "status") list.sort((a, b) => REEL_STATUSES.indexOf(a.status) - REEL_STATUSES.indexOf(b.status));
+      else list.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
       if (!state.reels.length) {
         box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">未有 Reel，撳「+ 新增 Reel」開始。</p>';
         return;
       }
-      box.innerHTML = state.reels
+      if (!list.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">冇符合嘅 Reel。</p>';
+        return;
+      }
+      box.innerHTML = list
         .map(
           (r) =>
             `<div class="reel-item${r.id === state.activeReelId ? " active" : ""}" data-id="${r.id}">` +
             `<div style="font-weight:700">${escapeHtml(r.title || "（未命名）")}</div>` +
-            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · ${r.status}</div>` +
+            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · <span class="status-badge" data-status="${r.status}" data-id="${r.id}" title="撳切換狀態">${STATUS_LABELS[r.status] || r.status}</span> · Step ${(r.wizardStep || 0) + 1}/7</div>` +
             `</div>`
         )
         .join("");
@@ -529,6 +671,55 @@
           renderReview();
         });
       });
+      box.querySelectorAll(".status-badge").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const r = state.reels.find((x) => x.id === el.dataset.id);
+          if (r) renderStatusPicker(r, el);
+        });
+      });
+    }
+
+    function bindReelListControls() {
+      const prefs = state.reelListPrefs || { q: "", statusFilter: "all", sort: "updated" };
+      const qEl = document.getElementById("reel-search");
+      const fEl = document.getElementById("reel-status-filter");
+      const sEl = document.getElementById("reel-sort");
+      if (qEl) { qEl.value = prefs.q || ""; qEl.addEventListener("input", () => { state.reelListPrefs.q = qEl.value; saveReels(state); renderReelList(); }); }
+      if (fEl) { fEl.value = prefs.statusFilter || "all"; fEl.addEventListener("change", () => { state.reelListPrefs.statusFilter = fEl.value; saveReels(state); renderReelList(); }); }
+      if (sEl) { sEl.value = prefs.sort || "updated"; sEl.addEventListener("change", () => { state.reelListPrefs.sort = sEl.value; saveReels(state); renderReelList(); }); }
+    }
+
+    function renderStatusPicker(r, anchorEl) {
+      const existing = document.getElementById("status-picker");
+      if (existing) existing.remove();
+      const opts = REEL_STATUSES.filter((s) => s !== r.status && canTransition(r.status, s));
+      const wrap = document.createElement("div");
+      wrap.innerHTML =
+        `<div id="status-picker" class="status-picker">` +
+        `<div class="status-picker-title">轉去：</div>` +
+        (opts.length
+          ? opts.map((s) => `<button type="button" class="status-pick-btn" data-status="${s}">${STATUS_LABELS[s]}</button>`).join("")
+          : `<div class="status-picker-empty">已到盡頭，冇可切換狀態。</div>`) +
+        `<button type="button" class="status-pick-close">取消</button>` +
+        `</div>`;
+      const pop = wrap.firstElementChild;
+      document.body.appendChild(pop);
+      const rect = anchorEl.getBoundingClientRect();
+      pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+      pop.style.left = (rect.left + window.scrollX) + "px";
+      pop.querySelectorAll(".status-pick-btn").forEach((b) => {
+        b.addEventListener("click", () => {
+          const newStatus = b.dataset.status;
+          r.status = newStatus;
+          if (newStatus === "published" && !r.publishedAt) r.publishedAt = new Date().toISOString();
+          r.updatedAt = new Date().toISOString();
+          saveReels(state);
+          pop.remove();
+          renderReelList();
+        });
+      });
+      pop.querySelector(".status-pick-close").addEventListener("click", () => pop.remove());
     }
 
     function escapeHtml(s) {
@@ -2161,7 +2352,12 @@
                 <button type="button" id="confirm-video-prompts">${r.videoPromptAt ? "已確認（重新確認）" : "確認影片 prompt"}</button>
                 <button type="button" id="copy-video-prompts" ${r.videoPromptAt ? "" : "disabled"}>複製影片 prompt</button>
               </div>
-              <div class="field"><label>已生成影片素材連結/備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="貼去 Veo/Runway 生成後，記低素材連結或備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+              <div class="asset-card">
+                <div class="field"><label>影片素材連結</label><input id="video-asset-url" type="url" placeholder="貼生成後嘅影片 URL" value="${escapeHtml(r.videoAssetUrl || "")}"></div>
+                <div class="field"><label>素材狀態</label><select id="video-asset-status">${["待生成", "生成中", "已生成", "已採用"].map((s) => `<option${r.videoAssetStatus === s ? " selected" : ""}>${s}</option>`).join("")}</select></div>
+                <div class="asset-card-actions"><button type="button" id="video-asset-open">打開 URL</button></div>
+                <div class="field"><label>備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="其他備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+              </div>
             </div>
           </div>
           <div class="wizard-step" data-step-n="5">
@@ -2186,7 +2382,13 @@
                 <button type="button" id="confirm-image-prompts">${r.imagePromptAt ? "已確認（重新確認）" : "確認圖片 prompt"}</button>
                 <button type="button" id="copy-image-prompts" ${r.imagePromptAt ? "" : "disabled"}>複製圖片 prompt</button>
               </div>
-              <div class="field"><label>已生成圖片素材連結/備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="貼去 Midjourney/即夢生成後，記低素材連結或備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+              <div class="asset-card">
+                <div class="field"><label>圖片素材連結</label><input id="image-asset-url" type="url" placeholder="貼生成後嘅圖片 URL" value="${escapeHtml(r.imageAssetUrl || "")}"></div>
+                <div class="field"><label>素材狀態</label><select id="image-asset-status">${["待生成", "生成中", "已生成", "已採用"].map((s) => `<option${r.imageAssetStatus === s ? " selected" : ""}>${s}</option>`).join("")}</select></div>
+                <div class="asset-card-actions"><button type="button" id="image-asset-open">打開 URL</button></div>
+                <div id="image-asset-preview" class="asset-preview">${r.imageAssetUrl ? `<img src="${escapeHtml(r.imageAssetUrl)}" alt="縮圖" onerror="this.parentNode.style.display='none'">` : ""}</div>
+                <div class="field"><label>備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="其他備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+              </div>
             </div>
           </div>
           <div class="wizard-nav">
@@ -2344,6 +2546,25 @@
       if (confirmVideoBtn) confirmVideoBtn.addEventListener("click", confirmVideoPrompts);
       const copyVideoBtn = panel.querySelector("#copy-video-prompts");
       if (copyVideoBtn) copyVideoBtn.addEventListener("click", copyVideoPrompts);
+      const videoUrlEl = panel.querySelector("#video-asset-url");
+      if (videoUrlEl) videoUrlEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetUrl = videoUrlEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const videoStatusEl = panel.querySelector("#video-asset-status");
+      if (videoStatusEl) videoStatusEl.addEventListener("change", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetStatus = videoStatusEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const videoOpenBtn = panel.querySelector("#video-asset-open");
+      if (videoOpenBtn) videoOpenBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        if (r2.videoAssetUrl) window.open(r2.videoAssetUrl, "_blank");
+      });
       const videoNoteEl = panel.querySelector("#video-asset-note");
       if (videoNoteEl) videoNoteEl.addEventListener("input", () => {
         const r2 = activeReel(); if (!r2) return;
@@ -2370,6 +2591,27 @@
       if (confirmImageBtn) confirmImageBtn.addEventListener("click", confirmImagePrompts);
       const copyImageBtn = panel.querySelector("#copy-image-prompts");
       if (copyImageBtn) copyImageBtn.addEventListener("click", copyImagePrompts);
+      const imageUrlEl = panel.querySelector("#image-asset-url");
+      if (imageUrlEl) imageUrlEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetUrl = imageUrlEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        const prev = panel.querySelector("#image-asset-preview");
+        if (prev) prev.innerHTML = r2.imageAssetUrl ? `<img src="${escapeHtml(r2.imageAssetUrl)}" alt="縮圖" onerror="this.parentNode.style.display='none'">` : "";
+      });
+      const imageStatusEl = panel.querySelector("#image-asset-status");
+      if (imageStatusEl) imageStatusEl.addEventListener("change", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetStatus = imageStatusEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const imageOpenBtn = panel.querySelector("#image-asset-open");
+      if (imageOpenBtn) imageOpenBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        if (r2.imageAssetUrl) window.open(r2.imageAssetUrl, "_blank");
+      });
       const imageNoteEl = panel.querySelector("#image-asset-note");
       if (imageNoteEl) imageNoteEl.addEventListener("input", () => {
         const r2 = activeReel(); if (!r2) return;
@@ -2438,6 +2680,20 @@
         panel.innerHTML = '<p style="color:#7a6f7a">請先新增或揀選一條 Reel。</p>';
         return;
       }
+      const platformOpts = ["", "Instagram", "Facebook", "TikTok", "小紅書", "其他"];
+      const publishSection =
+        `<div class="publish-section">
+          <h4>發佈資料</h4>
+          <div class="field"><label>發佈連結</label><input id="r-pub-url" type="url" placeholder="https://..." value="${escapeHtml(r.publishedUrl || "")}"></div>
+          <div class="field"><label>平台</label><select id="r-pub-platform">${platformOpts.map((p) => `<option value="${escapeHtml(p)}"${r.publishedPlatform === p ? " selected" : ""}>${p || "——"}</option>`).join("")}</select></div>
+          <div class="publish-engagement">
+            <div class="field"><label>Views</label><input id="r-pub-views" type="number" min="0" value="${r.views ?? ""}"></div>
+            <div class="field"><label>Likes</label><input id="r-pub-likes" type="number" min="0" value="${r.likes ?? ""}"></div>
+            <div class="field"><label>Saves</label><input id="r-pub-saves" type="number" min="0" value="${r.saves ?? ""}"></div>
+            <div class="field"><label>Comments</label><input id="r-pub-comments" type="number" min="0" value="${r.comments ?? ""}"></div>
+          </div>
+          <div class="field"><label>發佈日期</label><span class="pub-at">${r.publishedAt ? new Date(r.publishedAt).toLocaleString("zh-HK") : "未發佈"}</span></div>
+        </div>`;
       const rows = SCORE_KEYS
         .map(
           (k) =>
@@ -2449,9 +2705,27 @@
         )
         .join("");
       panel.innerHTML =
-        rows +
+        publishSection + rows +
         `<div class="field"><label>評分備註</label><textarea id="r-notes" rows="3">${escapeHtml(r.scoreNotes)}</textarea></div>` +
         `<button type="button" id="r-save" class="primary" style="padding:8px 14px;border-radius:8px;border:0;background:var(--rose);color:#fff;cursor:pointer">儲存評分</button>`;
+      const bindPub = (id, key) => {
+        const el = panel.querySelector(id);
+        if (!el) return;
+        const evt = (el.tagName === "SELECT" || el.type === "number") ? "input" : "input";
+        el.addEventListener(evt, () => {
+          const r2 = activeReel(); if (!r2) return;
+          if (el.type === "number") r2[key] = el.value === "" ? null : Number(el.value);
+          else r2[key] = el.value;
+          r2.updatedAt = new Date().toISOString();
+          saveReels(state);
+        });
+      };
+      bindPub("#r-pub-url", "publishedUrl");
+      bindPub("#r-pub-platform", "publishedPlatform");
+      bindPub("#r-pub-views", "views");
+      bindPub("#r-pub-likes", "likes");
+      bindPub("#r-pub-saves", "saves");
+      bindPub("#r-pub-comments", "comments");
       panel.querySelectorAll('input[type="range"]').forEach((el) => {
         el.addEventListener("input", () => {
           r.score[el.dataset.key] = Number(el.value);
@@ -2656,6 +2930,7 @@
       renderIdeaDrafts();
     });
     renderIdeaDrafts();
+    bindReelListControls();
     renderReelList();
     document.getElementById("copy-ai-brief").addEventListener("click", async () => {
       const brief = buildAiBrief();

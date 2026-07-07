@@ -154,7 +154,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -173,7 +173,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -211,7 +211,7 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -360,10 +360,11 @@ test("reels-studio Stage C script review + polish", async () => {
 test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v21/);
-  assert.match(html, /const REEL_SCHEMA_VERSION = 4/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function migrateReelToV4\(/);
+  assert.match(html, /function migrateReelToV5\(/);
   assert.match(html, /function inferWizardStep\(/);
   assert.match(html, /reelsSchemaVersion/);
   assert.match(html, /r\.wizardStep - 1/);
@@ -416,7 +417,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -599,7 +600,7 @@ test("reels-studio 自動備份 IndexedDB + 還原 UI", async () => {
 test("reels-studio Service Worker 註冊 + 更新提示", async () => {
   const html = await readHtml();
   const sw = await readSw();
-  assert.match(sw, /jessi-workflow-cache-v21/);
+  assert.match(sw, /jessi-workflow-cache-v22/);
   assert.match(html, /navigator\.serviceWorker\.register\(\s*["']jessi-workflow-sw\.js["']/);
   assert.match(html, /location\.protocol\s*!==\s*["']file:["']/);
   assert.match(html, /updatefound/);
@@ -653,4 +654,120 @@ test("reels-studio 已儲存 indicator", async () => {
   assert.match(html, /\.saved-indicator/);
   // saveReels 成功後 call showSavedIndicator
   assert.match(html, /showSavedIndicator\(\)/);
+});
+
+test("reels-studio 狀態機 + 可點擊 status badge", async () => {
+  const html = await readHtml();
+  assert.match(html, /const REEL_STATUSES = \[/);
+  assert.match(html, /const STATUS_LABELS = \{/);
+  assert.match(html, /const STATUS_COLORS = \{/);
+  assert.match(html, /function canTransition\(/);
+  // 7 狀態全數出現
+  for (const s of ["planning", "readyShoot", "shooting", "readyEdit", "readyPublish", "published", "scored"]) {
+    assert.match(html, new RegExp('"' + s + '"'));
+  }
+  // 中文 label
+  assert.match(html, /策劃/);
+  assert.match(html, /待拍/);
+  assert.match(html, /拍攝中/);
+  assert.match(html, /待剪/);
+  assert.match(html, /待發佈/);
+  assert.match(html, /已發佈/);
+  assert.match(html, /已復盤/);
+  // schema version 5 + migrate
+  assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
+  assert.match(html, /function migrateReelToV5\(/);
+  // renderReelList 用 badge
+  assert.match(html, /class="status-badge"/);
+  assert.match(html, /function renderStatusPicker\(/);
+  assert.match(html, /id="status-picker"/);
+  // canTransition 用 indexOf 相鄰
+  assert.match(html, /Math\.abs\(i\s*-\s*j\)\s*===\s*1/);
+  // status default 喺 normalize
+  assert.match(html, /REEL_STATUSES\.includes\(merged\.status\)/);
+  // CSS
+  assert.match(html, /\.status-badge/);
+  assert.match(html, /\.status-picker/);
+});
+
+test("reels-studio dashboard overview + search/filter/sort", async () => {
+  const html = await readHtml();
+  assert.match(html, /id="reel-overview"/);
+  assert.match(html, /function renderOverview\(/);
+  assert.match(html, /id="reel-search"/);
+  assert.match(html, /id="reel-status-filter"/);
+  assert.match(html, /id="reel-sort"/);
+  assert.match(html, /function bindReelListControls\(/);
+  assert.match(html, /reelListPrefs/);
+  assert.match(html, /\.reel-overview/);
+  assert.match(html, /\.reel-list-controls/);
+  assert.match(html, /按更新時間/);
+  assert.match(html, /按建立時間/);
+  assert.match(html, /按狀態/);
+  // sort 邏輯
+  assert.match(html, /prefs\.sort === "created"/);
+  assert.match(html, /prefs\.sort === "status"/);
+  // filter 邏輯
+  assert.match(html, /prefs\.statusFilter/);
+  // Step X/7 進度
+  assert.match(html, /Step \$\{/);
+  assert.match(html, /\/7/);
+});
+
+test("reels-studio 發佈追蹤欄位 + 復盤 tab UI", async () => {
+  const html = await readHtml();
+  // 新欄位喺 newReel
+  assert.match(html, /publishedUrl:/);
+  assert.match(html, /publishedPlatform:/);
+  assert.match(html, /views:/);
+  assert.match(html, /likes:/);
+  assert.match(html, /saves:/);
+  assert.match(html, /comments:/);
+  // renderReview 發佈資料 section
+  assert.match(html, /發佈資料/);
+  assert.match(html, /id="r-pub-url"/);
+  assert.match(html, /id="r-pub-platform"/);
+  assert.match(html, /id="r-pub-views"/);
+  assert.match(html, /id="r-pub-likes"/);
+  assert.match(html, /id="r-pub-saves"/);
+  assert.match(html, /id="r-pub-comments"/);
+  // publishedAt auto-set on published transition
+  assert.match(html, /newStatus === "published"/);
+  assert.match(html, /r\.publishedAt = new Date\(\)\.toISOString\(\)/);
+  // CSS
+  assert.match(html, /\.publish-section/);
+  // platform 選項
+  assert.match(html, /Instagram/);
+  assert.match(html, /TikTok/);
+  assert.match(html, /小紅書/);
+});
+
+test("reels-studio asset 卡（影片 + 圖片）", async () => {
+  const html = await readHtml();
+  // 新欄位
+  assert.match(html, /videoAssetUrl:/);
+  assert.match(html, /videoAssetStatus:/);
+  assert.match(html, /imageAssetUrl:/);
+  assert.match(html, /imageAssetStatus:/);
+  // asset 卡 UI
+  assert.match(html, /id="video-asset-url"/);
+  assert.match(html, /id="video-asset-status"/);
+  assert.match(html, /id="video-asset-open"/);
+  assert.match(html, /id="image-asset-url"/);
+  assert.match(html, /id="image-asset-status"/);
+  assert.match(html, /id="image-asset-open"/);
+  assert.match(html, /id="image-asset-preview"/);
+  // 狀態 dropdown 選項
+  assert.match(html, /待生成/);
+  assert.match(html, /生成中/);
+  assert.match(html, /已生成/);
+  assert.match(html, /已採用/);
+  // CSS
+  assert.match(html, /\.asset-card/);
+  assert.match(html, /\.asset-preview/);
+});
+
+test("reels-studio SW cache bumped to v22", async () => {
+  const sw = await readSw();
+  assert.match(sw, /jessi-workflow-cache-v22/);
 });
