@@ -154,7 +154,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -173,7 +173,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -211,7 +211,7 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -360,7 +360,7 @@ test("reels-studio Stage C script review + polish", async () => {
 test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function migrateReelToV4\(/);
@@ -417,7 +417,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -600,7 +600,7 @@ test("reels-studio 自動備份 IndexedDB + 還原 UI", async () => {
 test("reels-studio Service Worker 註冊 + 更新提示", async () => {
   const html = await readHtml();
   const sw = await readSw();
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /navigator\.serviceWorker\.register\(\s*["']jessi-workflow-sw\.js["']/);
   assert.match(html, /location\.protocol\s*!==\s*["']file:["']/);
   assert.match(html, /updatefound/);
@@ -768,9 +768,9 @@ test("reels-studio asset 卡（影片 + 圖片）", async () => {
   assert.match(html, /\.asset-preview/);
 });
 
-test("reels-studio SW cache bumped to v22", async () => {
+test("reels-studio SW cache bumped to v23", async () => {
   const sw = await readSw();
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
 });
 
 test("reels-studio 批4 T4+T2 hardening（window.open guard + search debounce）", async () => {
