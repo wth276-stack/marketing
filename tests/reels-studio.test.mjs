@@ -689,3 +689,27 @@ test("reels-studio 狀態機 + 可點擊 status badge", async () => {
   assert.match(html, /\.status-badge/);
   assert.match(html, /\.status-picker/);
 });
+
+test("reels-studio dashboard overview + search/filter/sort", async () => {
+  const html = await readHtml();
+  assert.match(html, /id="reel-overview"/);
+  assert.match(html, /function renderOverview\(/);
+  assert.match(html, /id="reel-search"/);
+  assert.match(html, /id="reel-status-filter"/);
+  assert.match(html, /id="reel-sort"/);
+  assert.match(html, /function bindReelListControls\(/);
+  assert.match(html, /reelListPrefs/);
+  assert.match(html, /\.reel-overview/);
+  assert.match(html, /\.reel-list-controls/);
+  assert.match(html, /按更新時間/);
+  assert.match(html, /按建立時間/);
+  assert.match(html, /按狀態/);
+  // sort 邏輯
+  assert.match(html, /prefs\.sort === "created"/);
+  assert.match(html, /prefs\.sort === "status"/);
+  // filter 邏輯
+  assert.match(html, /prefs\.statusFilter/);
+  // Step X/7 進度
+  assert.match(html, /Step \$\{/);
+  assert.match(html, /\/7/);
+});

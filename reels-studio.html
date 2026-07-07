@@ -150,6 +150,18 @@
     .status-pick-btn { padding: 4px 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
     .status-pick-btn:hover { background: #fdeaf1; border-color: var(--rose); }
     .status-pick-close { padding: 4px 10px; border: 0; border-radius: 6px; background: #eee; cursor: pointer; font-size: 12px; }
+    .reel-overview { padding: 6px 10px; font-size: 12px; color: #5a505a; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-bottom: 1px dashed #e8dfe5; }
+    .ov-total { font-weight: 700; color: #3a303a; }
+    .ov-chip { padding: 1px 6px; border-radius: 8px; font-size: 11px; color: #fff; }
+ .ov-chip[data-status="planning"] { background: #7a6f7a; }
+    .ov-chip[data-status="readyShoot"] { background: #c96b8a; }
+    .ov-chip[data-status="shooting"] { background: #e8a33d; }
+    .ov-chip[data-status="readyEdit"] { background: #8a5cd8; }
+    .ov-chip[data-status="readyPublish"] { background: #3d8ae8; }
+    .ov-chip[data-status="published"] { background: #2e7d32; }
+    .ov-chip[data-status="scored"] { background: #5a5a5a; }
+    .reel-list-controls { padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #e8dfe5; }
+    .reel-list-controls input, .reel-list-controls select { font-size: 12px; padding: 3px 6px; border: 1px solid #ddd; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -163,6 +175,25 @@
         <button type="button" id="open-idea-batch">批量出 Idea</button>
         <button type="button" id="duplicate-reel">複製</button>
         <button type="button" id="delete-reel">刪除</button>
+      </div>
+      <div id="reel-overview" class="reel-overview"></div>
+      <div class="reel-list-controls">
+        <input id="reel-search" type="search" placeholder="搵 reel（標題/結構）">
+        <select id="reel-status-filter">
+          <option value="all">全部狀態</option>
+          <option value="planning">策劃</option>
+          <option value="readyShoot">待拍</option>
+          <option value="shooting">拍攝中</option>
+          <option value="readyEdit">待剪</option>
+          <option value="readyPublish">待發佈</option>
+          <option value="published">已發佈</option>
+          <option value="scored">已復盤</option>
+        </select>
+        <select id="reel-sort">
+          <option value="updated">按更新時間</option>
+          <option value="created">按建立時間</option>
+          <option value="status">按狀態</option>
+        </select>
       </div>
       <div id="reel-items"></div>
       <div id="idea-batch-panel" class="idea-batch-panel" hidden>
@@ -516,6 +547,10 @@
       });
       if (!Array.isArray(state.ideaDrafts)) state.ideaDrafts = [];
       if (!state.ideaBatchSchemaVersion) state.ideaBatchSchemaVersion = 1;
+      if (!state.reelListPrefs || typeof state.reelListPrefs !== "object") state.reelListPrefs = { q: "", statusFilter: "all", sort: "updated" };
+      if (typeof state.reelListPrefs.q !== "string") state.reelListPrefs.q = "";
+      if (typeof state.reelListPrefs.statusFilter !== "string") state.reelListPrefs.statusFilter = "all";
+      if (typeof state.reelListPrefs.sort !== "string") state.reelListPrefs.sort = "updated";
       if (state.activeReelId && !state.reels.find((r) => r.id === state.activeReelId)) {
         state.activeReelId = state.reels[0]?.id || null;
       }
@@ -566,18 +601,43 @@
       renderReview();
     }
 
+    function renderOverview() {
+      const el = document.getElementById("reel-overview");
+      if (!el) return;
+      const counts = {};
+      for (const s of REEL_STATUSES) counts[s] = 0;
+      for (const r of state.reels) counts[r.status] = (counts[r.status] || 0) + 1;
+      const chips = REEL_STATUSES.filter((s) => counts[s] > 0)
+        .map((s) => `<span class="ov-chip" data-status="${s}">${STATUS_LABELS[s]} ${counts[s]}</span>`)
+        .join("");
+      el.innerHTML = `<span class="ov-total">${state.reels.length} 條 reel</span>${chips}`;
+    }
+
     function renderReelList() {
       const box = document.getElementById("reel-items");
+      renderOverview();
+      const prefs = state.reelListPrefs || { q: "", statusFilter: "all", sort: "updated" };
+      let list = state.reels.slice();
+      const q = (prefs.q || "").trim().toLowerCase();
+      if (q) list = list.filter((r) => (r.title || "").toLowerCase().includes(q) || (r.structure || "").toLowerCase().includes(q));
+      if (prefs.statusFilter && prefs.statusFilter !== "all") list = list.filter((r) => r.status === prefs.statusFilter);
+      if (prefs.sort === "created") list.sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+      else if (prefs.sort === "status") list.sort((a, b) => REEL_STATUSES.indexOf(a.status) - REEL_STATUSES.indexOf(b.status));
+      else list.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
       if (!state.reels.length) {
         box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">未有 Reel，撳「+ 新增 Reel」開始。</p>';
         return;
       }
-      box.innerHTML = state.reels
+      if (!list.length) {
+        box.innerHTML = '<p style="color:#7a6f7a;font-size:13px">冇符合嘅 Reel。</p>';
+        return;
+      }
+      box.innerHTML = list
         .map(
           (r) =>
             `<div class="reel-item${r.id === state.activeReelId ? " active" : ""}" data-id="${r.id}">` +
             `<div style="font-weight:700">${escapeHtml(r.title || "（未命名）")}</div>` +
-            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · <span class="status-badge" data-status="${r.status}" data-id="${r.id}" title="撳切換狀態">${STATUS_LABELS[r.status] || r.status}</span></div>` +
+            `<div style="font-size:12px;color:#7a6f7a">${r.structure} · <span class="status-badge" data-status="${r.status}" data-id="${r.id}" title="撳切換狀態">${STATUS_LABELS[r.status] || r.status}</span> · Step ${(r.wizardStep || 0) + 1}/7</div>` +
             `</div>`
         )
         .join("");
@@ -598,6 +658,16 @@
           if (r) renderStatusPicker(r, el);
         });
       });
+    }
+
+    function bindReelListControls() {
+      const prefs = state.reelListPrefs || { q: "", statusFilter: "all", sort: "updated" };
+      const qEl = document.getElementById("reel-search");
+      const fEl = document.getElementById("reel-status-filter");
+      const sEl = document.getElementById("reel-sort");
+      if (qEl) { qEl.value = prefs.q || ""; qEl.addEventListener("input", () => { state.reelListPrefs.q = qEl.value; saveReels(state); renderReelList(); }); }
+      if (fEl) { fEl.value = prefs.statusFilter || "all"; fEl.addEventListener("change", () => { state.reelListPrefs.statusFilter = fEl.value; saveReels(state); renderReelList(); }); }
+      if (sEl) { sEl.value = prefs.sort || "updated"; sEl.addEventListener("change", () => { state.reelListPrefs.sort = sEl.value; saveReels(state); renderReelList(); }); }
     }
 
     function renderStatusPicker(r, anchorEl) {
@@ -2755,6 +2825,7 @@
       renderIdeaDrafts();
     });
     renderIdeaDrafts();
+    bindReelListControls();
     renderReelList();
     document.getElementById("copy-ai-brief").addEventListener("click", async () => {
       const brief = buildAiBrief();
