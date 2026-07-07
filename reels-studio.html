@@ -994,6 +994,28 @@
       return { signal: controller.signal, stop };
     }
 
+    async function runAiGenerate({ btnId, promptFn, schema, preGuard, assign, postRender, labelGen, regenConfirm }) {
+      const r = activeReel();
+      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
+      if (regenConfirm && !regenConfirm(r)) return;
+      if (preGuard) { const msg = preGuard(r); if (msg) { alert(msg); return; } }
+      const btn = document.getElementById(btnId);
+      const loading = bindAiBtnLoading(btn, "生成中…");
+      try {
+        const data = await callGemini(promptFn(r), schema, { signal: loading.signal });
+        assign(r, data);
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        if (postRender) postRender();
+        else renderPlan();
+      } catch (e) {
+        handleAiError(e);
+      } finally {
+        loading.stop();
+        if (btn) btn.textContent = labelGen(r);
+      }
+    }
+
     const AI_GROUP_ARRAY = {
       ctaStyle: "ctaStyles",
       broll: "brollSets"
@@ -1048,28 +1070,22 @@
     }
 
     async function generateAiHooks() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.title.trim()) { alert("請先填主題。"); return; }
       const sel = document.getElementById("hook-type-select");
-      if (sel) r.hookTypeSel = sel.value;
       const fSel = document.getElementById("hook-formula-select");
-      if (fSel) r.hookFormulaSel = fSel.value;
-      const btn = document.getElementById("ai-generate-hooks");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(hookPrompt(r), HOOK_SCHEMA, { signal: loading.signal });
-        r.hookCandidates = Array.isArray(data.hooks) ? data.hooks : [];
-        r.hookCandidatesAt = new Date().toISOString();
-        r.updatedAt = r.hookCandidatesAt;
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.hookCandidates?.length ? "重新生成 Hook" : "AI 生成 Hook");
-      }
+      const preGuard = (r) => r.title.trim() ? null : "請先填主題。";
+      await runAiGenerate({
+        btnId: "ai-generate-hooks",
+        promptFn: hookPrompt,
+        schema: HOOK_SCHEMA,
+        preGuard,
+        assign: (r, data) => {
+          if (sel) r.hookTypeSel = sel.value;
+          if (fSel) r.hookFormulaSel = fSel.value;
+          r.hookCandidates = Array.isArray(data.hooks) ? data.hooks : [];
+          r.hookCandidatesAt = new Date().toISOString();
+        },
+        labelGen: (r) => (r.hookCandidates && r.hookCandidates.length ? "重新生成 Hook" : "AI 生成 Hook")
+      });
     }
 
     function regenerateHooks() {
@@ -1191,24 +1207,17 @@
     }
 
     async function generateAiOptions() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.title.trim()) { alert("請先填主題。"); return; }
-      const btn = document.getElementById("ai-generate-options");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(stageAPrompt(r), STAGE_A_SCHEMA, { signal: loading.signal });
-        r.aiOptions = data;
-        r.aiPicks = { structure: r.aiPicks?.structure || null, angle: r.aiPicks?.angle || null, lengthSec: r.aiPicks?.lengthSec ?? null, subtitleStyle: r.aiPicks?.subtitleStyle ?? null, ctaStyle: null, broll: null };
-        r.updatedAt = new Date().toISOString();
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.aiOptions ? "重新生成選項" : "AI 生成選項");
-      }
+      await runAiGenerate({
+        btnId: "ai-generate-options",
+        promptFn: stageAPrompt,
+        schema: STAGE_A_SCHEMA,
+        preGuard: (r) => r.title.trim() ? null : "請先填主題。",
+        assign: (r, data) => {
+          r.aiOptions = data;
+          r.aiPicks = { structure: r.aiPicks?.structure || null, angle: r.aiPicks?.angle || null, lengthSec: r.aiPicks?.lengthSec ?? null, subtitleStyle: r.aiPicks?.subtitleStyle ?? null, ctaStyle: null, broll: null };
+        },
+        labelGen: (r) => (r.aiOptions ? "重新生成選項" : "AI 生成選項")
+      });
     }
 
     function renderAiOptions() {
@@ -1284,24 +1293,17 @@
     }
 
     async function generateAiDirections() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      const p = r.aiPicks || {};
-      if (!p.structure || !p.angle) { alert("先揀結構同角度。"); return; }
-      const btn = document.getElementById("gen-directions");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(directionPrompt(r), DIRECTION_SCHEMA, { signal: loading.signal });
-        r.directionCandidates = Array.isArray(data.directions) ? data.directions : [];
-        r.updatedAt = new Date().toISOString();
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.contentDirection ? "重新生成方向" : "生成方向建議");
-      }
+      await runAiGenerate({
+        btnId: "gen-directions",
+        promptFn: directionPrompt,
+        schema: DIRECTION_SCHEMA,
+        preGuard: (r) => {
+          const p = r.aiPicks || {};
+          return (p.structure && p.angle) ? null : "先揀結構同角度。";
+        },
+        assign: (r, data) => { r.directionCandidates = Array.isArray(data.directions) ? data.directions : []; },
+        labelGen: (r) => (r.contentDirection ? "重新生成方向" : "生成方向建議")
+      });
     }
 
     function regenerateDirections() {
@@ -1523,40 +1525,32 @@
     }
 
     async function generateAiContent() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      const btn = document.getElementById("ai-generate-content");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(stageBPrompt(r), STAGE_B_SCHEMA, { signal: loading.signal });
-        r.segments = (Array.isArray(data.segments) ? data.segments : []).map((s) => ({
-          label: s.label || "",
-          shot: s.shot || "",
-          voiceover: s.voiceover || "",
-          subtitle: s.subtitle || "",
-          durationSec: Number(s.durationSec) || 0,
-          note: ""
-        }));
-        if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
-        r.summary = data.summary || "";
-        r.caption = data.caption || "";
-        r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
-        r.coverText = data.coverText || "";
-        r.scriptReview = null;
-        r.scriptReviewAt = null;
-        r.aiGeneratedAt = new Date().toISOString();
-        r.updatedAt = r.aiGeneratedAt;
-        assembleScript(true);
-        saveReels(state);
-        renderReelList();
-        renderPlan();
-        alert("已生成完整內容，可喺下面欄位微調。");
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.aiGeneratedAt ? "重新生成內容" : "生成完整內容");
-      }
+      await runAiGenerate({
+        btnId: "ai-generate-content",
+        promptFn: stageBPrompt,
+        schema: STAGE_B_SCHEMA,
+        assign: (r, data) => {
+          r.segments = (Array.isArray(data.segments) ? data.segments : []).map((s) => ({
+            label: s.label || "",
+            shot: s.shot || "",
+            voiceover: s.voiceover || "",
+            subtitle: s.subtitle || "",
+            durationSec: Number(s.durationSec) || 0,
+            note: ""
+          }));
+          if (!r.segments.length) r.segments.push({ label: "", shot: "", voiceover: "", subtitle: "", durationSec: 0, note: "" });
+          r.summary = data.summary || "";
+          r.caption = data.caption || "";
+          r.hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
+          r.coverText = data.coverText || "";
+          r.scriptReview = null;
+          r.scriptReviewAt = null;
+          r.aiGeneratedAt = new Date().toISOString();
+          assembleScript(true);
+        },
+        postRender: () => { renderReelList(); renderPlan(); alert("已生成完整內容，可喺下面欄位微調。"); },
+        labelGen: (r) => (r.aiGeneratedAt ? "重新生成內容" : "生成完整內容")
+      });
     }
 
     function regenerateOptions() {
@@ -1710,33 +1704,26 @@
     }
 
     async function generateVideoPrompts() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.aiGeneratedAt) { alert("先生成完整內容（Step 2）再出影片 prompt。"); return; }
-      const btn = document.getElementById("ai-gen-video-prompts");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(videoPromptPrompt(r), VIDEO_PROMPT_SCHEMA, { signal: loading.signal });
-        r.videoPrompts = (Array.isArray(data.shots) ? data.shots : []).map((s) => ({
-          segIndex: Number(s.segIndex) || 0,
-          label: s.label || "",
-          visualPrompt: s.visualPrompt || "",
-          camera: s.camera || "",
-          lighting: s.lighting || "",
-          durationSec: Number(s.durationSec) || 0
-        }));
-        r.videoMasterPrompt = data.masterPrompt || "";
-        r.videoOverallStyle = data.overallStyle || "";
-        r.videoPromptAt = null;
-        r.updatedAt = new Date().toISOString();
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.videoPrompts?.length ? "重新生成影片 prompt" : "AI 生成影片 prompt");
-      }
+      await runAiGenerate({
+        btnId: "ai-gen-video-prompts",
+        promptFn: videoPromptPrompt,
+        schema: VIDEO_PROMPT_SCHEMA,
+        preGuard: (r) => r.aiGeneratedAt ? null : "先生成完整內容（Step 2）再出影片 prompt。",
+        assign: (r, data) => {
+          r.videoPrompts = (Array.isArray(data.shots) ? data.shots : []).map((s) => ({
+            segIndex: Number(s.segIndex) || 0,
+            label: s.label || "",
+            visualPrompt: s.visualPrompt || "",
+            camera: s.camera || "",
+            lighting: s.lighting || "",
+            durationSec: Number(s.durationSec) || 0
+          }));
+          r.videoMasterPrompt = data.masterPrompt || "";
+          r.videoOverallStyle = data.overallStyle || "";
+          r.videoPromptAt = null;
+        },
+        labelGen: (r) => (r.videoPrompts && r.videoPrompts.length ? "重新生成影片 prompt" : "AI 生成影片 prompt")
+      });
     }
 
     function regenerateVideoPrompts() {
@@ -1747,30 +1734,23 @@
     }
 
     async function generateCarousel() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.videoPromptAt) { alert("先喺 Step 4 確認影片 prompt。"); return; }
-      const btn = document.getElementById("ai-gen-carousel");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(carouselPrompt(r), CAROUSEL_SCHEMA, { signal: loading.signal });
-        r.carousel = (Array.isArray(data.slides) ? data.slides : []).map((s) => ({
-          slideType: s.slideType || "content",
-          title: s.title || "",
-          body: s.body || "",
-          cta: s.cta || ""
-        }));
-        r.carouselAt = new Date().toISOString();
-        r.carouselConfirmedAt = null;
-        r.updatedAt = r.carouselAt;
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.carousel?.length ? "重新生成 Carousel" : "AI 生成 Carousel");
-      }
+      await runAiGenerate({
+        btnId: "ai-gen-carousel",
+        promptFn: carouselPrompt,
+        schema: CAROUSEL_SCHEMA,
+        preGuard: (r) => r.videoPromptAt ? null : "先喺 Step 4 確認影片 prompt。",
+        assign: (r, data) => {
+          r.carousel = (Array.isArray(data.slides) ? data.slides : []).map((s) => ({
+            slideType: s.slideType || "content",
+            title: s.title || "",
+            body: s.body || "",
+            cta: s.cta || ""
+          }));
+          r.carouselAt = new Date().toISOString();
+          r.carouselConfirmedAt = null;
+        },
+        labelGen: (r) => (r.carousel && r.carousel.length ? "重新生成 Carousel" : "AI 生成 Carousel")
+      });
     }
 
     function regenerateCarousel() {
@@ -1781,27 +1761,20 @@
     }
 
     async function generateImagePrompts() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.carouselConfirmedAt) { alert("先喺 Step 5 確認 Carousel。"); return; }
-      const btn = document.getElementById("ai-gen-image-prompts");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(imagePromptPrompt(r), IMAGE_PROMPT_SCHEMA, { signal: loading.signal });
-        r.imagePrompts = (Array.isArray(data.prompts) ? data.prompts : []).map((p) => ({
-          slideIndex: Number(p.slideIndex) || 0,
-          prompt: p.prompt || ""
-        }));
-        r.imagePromptAt = null;
-        r.updatedAt = new Date().toISOString();
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.imagePrompts?.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt");
-      }
+      await runAiGenerate({
+        btnId: "ai-gen-image-prompts",
+        promptFn: imagePromptPrompt,
+        schema: IMAGE_PROMPT_SCHEMA,
+        preGuard: (r) => r.carouselConfirmedAt ? null : "先喺 Step 5 確認 Carousel。",
+        assign: (r, data) => {
+          r.imagePrompts = (Array.isArray(data.prompts) ? data.prompts : []).map((p) => ({
+            slideIndex: Number(p.slideIndex) || 0,
+            prompt: p.prompt || ""
+          }));
+          r.imagePromptAt = null;
+        },
+        labelGen: (r) => (r.imagePrompts && r.imagePrompts.length ? "重新生成圖片 prompt" : "AI 生成圖片 prompt")
+      });
     }
 
     function regenerateImagePrompts() {
@@ -1868,28 +1841,21 @@
     }
 
     async function reviewScript() {
-      const r = activeReel();
-      if (!r) { alert("請先新增或揀選一條 Reel。"); return; }
-      if (!r.scriptText || !r.scriptText.trim()) { alert("請先生成或填腳本。"); return; }
-      const btn = document.getElementById("ai-review-script");
-      const loading = bindAiBtnLoading(btn, "生成中…");
-      try {
-        const data = await callGemini(reviewPrompt(r), REVIEW_SCHEMA, { signal: loading.signal });
-        r.scriptReview = {
-          issues: Array.isArray(data.issues) ? data.issues : [],
-          polishedScript: data.polishedScript || "",
-          polishedCaption: data.polishedCaption || ""
-        };
-        r.scriptReviewAt = new Date().toISOString();
-        r.updatedAt = r.scriptReviewAt;
-        saveReels(state);
-        renderPlan();
-      } catch (e) {
-        handleAiError(e);
-      } finally {
-        loading.stop();
-        if (btn) btn.textContent = (activeReel()?.scriptReview ? "重新檢查腳本" : "AI 檢查腳本");
-      }
+      await runAiGenerate({
+        btnId: "ai-review-script",
+        promptFn: reviewPrompt,
+        schema: REVIEW_SCHEMA,
+        preGuard: (r) => (r.scriptText && r.scriptText.trim()) ? null : "請先生成或填腳本。",
+        assign: (r, data) => {
+          r.scriptReview = {
+            issues: Array.isArray(data.issues) ? data.issues : [],
+            polishedScript: data.polishedScript || "",
+            polishedCaption: data.polishedCaption || ""
+          };
+          r.scriptReviewAt = new Date().toISOString();
+        },
+        labelGen: (r) => (r.scriptReview ? "重新檢查腳本" : "AI 檢查腳本")
+      });
     }
 
     function regenerateReview() {
