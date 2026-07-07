@@ -741,3 +741,28 @@ test("reels-studio 發佈追蹤欄位 + 復盤 tab UI", async () => {
   assert.match(html, /TikTok/);
   assert.match(html, /小紅書/);
 });
+
+test("reels-studio asset 卡（影片 + 圖片）", async () => {
+  const html = await readHtml();
+  // 新欄位
+  assert.match(html, /videoAssetUrl:/);
+  assert.match(html, /videoAssetStatus:/);
+  assert.match(html, /imageAssetUrl:/);
+  assert.match(html, /imageAssetStatus:/);
+  // asset 卡 UI
+  assert.match(html, /id="video-asset-url"/);
+  assert.match(html, /id="video-asset-status"/);
+  assert.match(html, /id="video-asset-open"/);
+  assert.match(html, /id="image-asset-url"/);
+  assert.match(html, /id="image-asset-status"/);
+  assert.match(html, /id="image-asset-open"/);
+  assert.match(html, /id="image-asset-preview"/);
+  // 狀態 dropdown 選項
+  assert.match(html, /待生成/);
+  assert.match(html, /生成中/);
+  assert.match(html, /已生成/);
+  assert.match(html, /已採用/);
+  // CSS
+  assert.match(html, /\.asset-card/);
+  assert.match(html, /\.asset-preview/);
+});

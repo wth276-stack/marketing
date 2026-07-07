@@ -166,6 +166,12 @@
     .publish-section h4 { margin: 0 0 8px; font-size: 14px; color: var(--rose); }
     .publish-engagement { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
     .pub-at { font-size: 13px; color: #5a505a; }
+    .asset-card { border: 1px solid #e8dfe5; border-radius: 8px; padding: 10px; margin-top: 8px; background: #faf6f8; }
+    .asset-card-actions { margin: 4px 0; }
+    .asset-card-actions button { padding: 4px 12px; border: 1px solid var(--rose); border-radius: 6px; background: #fff; color: var(--rose); cursor: pointer; font-size: 13px; }
+    .asset-card-actions button:hover { background: #fdeaf1; }
+    .asset-preview { margin: 6px 0; min-height: 0; }
+    .asset-preview img { max-width: 100%; max-height: 160px; border-radius: 6px; border: 1px solid #e8dfe5; }
   </style>
 </head>
 <body>
@@ -422,12 +428,16 @@
         videoOverallStyle: "",
         videoPromptAt: null,
         videoAssetNote: "",
+        videoAssetUrl: "",
+        videoAssetStatus: "待生成",
         carousel: [],
         carouselAt: null,
         carouselConfirmedAt: null,
         imagePrompts: [],
         imagePromptAt: null,
         imageAssetNote: "",
+        imageAssetUrl: "",
+        imageAssetStatus: "待生成",
         wizardStep: 0
       };
       for (const k of CHECKLIST_KEYS) reel.checklist[k] = false;
@@ -2342,7 +2352,12 @@
                 <button type="button" id="confirm-video-prompts">${r.videoPromptAt ? "已確認（重新確認）" : "確認影片 prompt"}</button>
                 <button type="button" id="copy-video-prompts" ${r.videoPromptAt ? "" : "disabled"}>複製影片 prompt</button>
               </div>
-              <div class="field"><label>已生成影片素材連結/備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="貼去 Veo/Runway 生成後，記低素材連結或備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+              <div class="asset-card">
+                <div class="field"><label>影片素材連結</label><input id="video-asset-url" type="url" placeholder="貼生成後嘅影片 URL" value="${escapeHtml(r.videoAssetUrl || "")}"></div>
+                <div class="field"><label>素材狀態</label><select id="video-asset-status">${["待生成", "生成中", "已生成", "已採用"].map((s) => `<option${r.videoAssetStatus === s ? " selected" : ""}>${s}</option>`).join("")}</select></div>
+                <div class="asset-card-actions"><button type="button" id="video-asset-open">打開 URL</button></div>
+                <div class="field"><label>備註</label><textarea id="video-asset-note" class="asset-note" rows="2" placeholder="其他備註">${escapeHtml(r.videoAssetNote || "")}</textarea></div>
+              </div>
             </div>
           </div>
           <div class="wizard-step" data-step-n="5">
@@ -2367,7 +2382,13 @@
                 <button type="button" id="confirm-image-prompts">${r.imagePromptAt ? "已確認（重新確認）" : "確認圖片 prompt"}</button>
                 <button type="button" id="copy-image-prompts" ${r.imagePromptAt ? "" : "disabled"}>複製圖片 prompt</button>
               </div>
-              <div class="field"><label>已生成圖片素材連結/備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="貼去 Midjourney/即夢生成後，記低素材連結或備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+              <div class="asset-card">
+                <div class="field"><label>圖片素材連結</label><input id="image-asset-url" type="url" placeholder="貼生成後嘅圖片 URL" value="${escapeHtml(r.imageAssetUrl || "")}"></div>
+                <div class="field"><label>素材狀態</label><select id="image-asset-status">${["待生成", "生成中", "已生成", "已採用"].map((s) => `<option${r.imageAssetStatus === s ? " selected" : ""}>${s}</option>`).join("")}</select></div>
+                <div class="asset-card-actions"><button type="button" id="image-asset-open">打開 URL</button></div>
+                <div id="image-asset-preview" class="asset-preview">${r.imageAssetUrl ? `<img src="${escapeHtml(r.imageAssetUrl)}" alt="縮圖" onerror="this.parentNode.style.display='none'">` : ""}</div>
+                <div class="field"><label>備註</label><textarea id="image-asset-note" class="asset-note" rows="2" placeholder="其他備註">${escapeHtml(r.imageAssetNote || "")}</textarea></div>
+              </div>
             </div>
           </div>
           <div class="wizard-nav">
@@ -2525,6 +2546,25 @@
       if (confirmVideoBtn) confirmVideoBtn.addEventListener("click", confirmVideoPrompts);
       const copyVideoBtn = panel.querySelector("#copy-video-prompts");
       if (copyVideoBtn) copyVideoBtn.addEventListener("click", copyVideoPrompts);
+      const videoUrlEl = panel.querySelector("#video-asset-url");
+      if (videoUrlEl) videoUrlEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetUrl = videoUrlEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const videoStatusEl = panel.querySelector("#video-asset-status");
+      if (videoStatusEl) videoStatusEl.addEventListener("change", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.videoAssetStatus = videoStatusEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const videoOpenBtn = panel.querySelector("#video-asset-open");
+      if (videoOpenBtn) videoOpenBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        if (r2.videoAssetUrl) window.open(r2.videoAssetUrl, "_blank");
+      });
       const videoNoteEl = panel.querySelector("#video-asset-note");
       if (videoNoteEl) videoNoteEl.addEventListener("input", () => {
         const r2 = activeReel(); if (!r2) return;
@@ -2551,6 +2591,27 @@
       if (confirmImageBtn) confirmImageBtn.addEventListener("click", confirmImagePrompts);
       const copyImageBtn = panel.querySelector("#copy-image-prompts");
       if (copyImageBtn) copyImageBtn.addEventListener("click", copyImagePrompts);
+      const imageUrlEl = panel.querySelector("#image-asset-url");
+      if (imageUrlEl) imageUrlEl.addEventListener("input", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetUrl = imageUrlEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+        const prev = panel.querySelector("#image-asset-preview");
+        if (prev) prev.innerHTML = r2.imageAssetUrl ? `<img src="${escapeHtml(r2.imageAssetUrl)}" alt="縮圖" onerror="this.parentNode.style.display='none'">` : "";
+      });
+      const imageStatusEl = panel.querySelector("#image-asset-status");
+      if (imageStatusEl) imageStatusEl.addEventListener("change", () => {
+        const r2 = activeReel(); if (!r2) return;
+        r2.imageAssetStatus = imageStatusEl.value;
+        r2.updatedAt = new Date().toISOString();
+        saveReels(state);
+      });
+      const imageOpenBtn = panel.querySelector("#image-asset-open");
+      if (imageOpenBtn) imageOpenBtn.addEventListener("click", () => {
+        const r2 = activeReel(); if (!r2) return;
+        if (r2.imageAssetUrl) window.open(r2.imageAssetUrl, "_blank");
+      });
       const imageNoteEl = panel.querySelector("#image-asset-note");
       if (imageNoteEl) imageNoteEl.addEventListener("input", () => {
         const r2 = activeReel(); if (!r2) return;
