@@ -782,3 +782,18 @@ test("reels-studio 批4 T4+T2 hardening（window.open guard + search debounce）
   assert.match(html, /clearTimeout\(_searchTimer\)/);
   assert.match(html, /setTimeout\([^,]+,\s*200\)/);
 });
+
+test("reels-studio 批4 #13 keyboard shortcuts", async () => {
+  const html = await readHtml();
+  assert.match(html, /function tryAdvanceWizard\(\)/);
+  assert.match(html, /function switchTab\(/);
+  assert.match(html, /ArrowLeft/);
+  assert.match(html, /ArrowRight/);
+  assert.match(html, /metaKey \|\| e\.ctrlKey/);
+  assert.match(html, /preventDefault\(\)/);
+  assert.match(html, /switchTab\("plan-panel"\)/);
+  assert.match(html, /switchTab\("shoot-panel"\)/);
+  assert.match(html, /switchTab\("review-panel"\)/);
+  // inField 過濾
+  assert.match(html, /tagName === "INPUT" \|\| tag === "TEXTAREA"/);
+});

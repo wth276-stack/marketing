@@ -2213,6 +2213,27 @@
       renderPlan();
     }
 
+    function tryAdvanceWizard() {
+      const r = activeReel(); if (!r) return;
+      const cur = r.wizardStep ?? 0;
+      if (cur === 0 && !canAdvanceToStep1(r)) { alert("請先填主題、重點，同揀 Hook、CTA。"); return; }
+      if (cur === 1 && !canAdvanceToStep2(r)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
+      if (cur === 2 && !canAdvanceToStep3(r)) { alert("先生成完整內容。"); return; }
+      if (cur === 3 && !canAdvanceToStep4(r)) { alert("先生成完整內容再出影片 prompt。"); return; }
+      if (cur === 4 && !canAdvanceToStep5(r)) { alert("先確認影片 prompt。"); return; }
+      if (cur === 5 && !canAdvanceToStep6(r)) { alert("先確認 Carousel。"); return; }
+      goWizardStep(cur + 1);
+    }
+
+    function switchTab(panelId) {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+      const btn = document.querySelector('.tab-btn[data-tab="' + panelId + '"]');
+      if (btn) btn.classList.add("active");
+      const panel = document.getElementById(panelId);
+      if (panel) panel.classList.add("active");
+    }
+
     function renderPlan() {
       const panel = document.getElementById("plan-panel");
       const r = activeReel();
@@ -2506,15 +2527,7 @@
       if (prevBtn) prevBtn.addEventListener("click", () => goWizardStep((activeReel()?.wizardStep ?? 0) - 1));
       if (skipBtn) skipBtn.addEventListener("click", () => goWizardStep(2));
       if (nextBtn) nextBtn.addEventListener("click", () => {
-        const r2 = activeReel(); if (!r2) return;
-        const cur = r2.wizardStep ?? 0;
-        if (cur === 0 && !canAdvanceToStep1(r2)) { alert("請先填主題、重點，同揀 Hook、CTA。"); return; }
-        if (cur === 1 && !canAdvanceToStep2(r2)) { alert("先揀齊結構、角度、片長、字幕風格，同生成選項。"); return; }
-        if (cur === 2 && !canAdvanceToStep3(r2)) { alert("先生成完整內容。"); return; }
-        if (cur === 3 && !canAdvanceToStep4(r2)) { alert("先生成完整內容再出影片 prompt。"); return; }
-        if (cur === 4 && !canAdvanceToStep5(r2)) { alert("先確認影片 prompt。"); return; }
-        if (cur === 5 && !canAdvanceToStep6(r2)) { alert("先確認 Carousel。"); return; }
-        goWizardStep(cur + 1);
+        tryAdvanceWizard();
       });
       panel.querySelectorAll(".wizard-dot").forEach((d) => {
         d.addEventListener("click", () => {
@@ -2952,13 +2965,31 @@
     });
     document.getElementById("import-theme").addEventListener("click", importWeekTheme);
     renderPlan();
+    document.addEventListener("keydown", (e) => {
+      const tag = e.target ? e.target.tagName : "";
+      const inField = e.target && (e.target.tagName === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveReels(state);
+        showSavedIndicator();
+        return;
+      }
+      if (inField) return;
+      if (e.key === "ArrowLeft") {
+        const r = activeReel();
+        if (r && (r.wizardStep ?? 0) > 0) goWizardStep((r.wizardStep ?? 0) - 1);
+      } else if (e.key === "ArrowRight") {
+        tryAdvanceWizard();
+      } else if (e.key === "1") {
+        switchTab("plan-panel");
+      } else if (e.key === "2") {
+        switchTab("shoot-panel");
+      } else if (e.key === "3") {
+        switchTab("review-panel");
+      }
+    });
     document.querySelectorAll(".tab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-        document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById(btn.dataset.tab).classList.add("active");
-      });
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
     renderShootChecklist();
     renderReview();
