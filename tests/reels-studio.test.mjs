@@ -154,7 +154,7 @@ test("reels-studio declares full-caption assemble + copy", async () => {
 test("reels-studio Stage B asks full caption + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /成段完整.*caption|完整.*IG.*caption|caption.*成段/);
 });
 
@@ -173,7 +173,7 @@ test("reels-studio declares full-script assemble + copy + scriptText", async () 
 test("reels-studio Stage B auto-assembles script + SW bumped to v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /assembleScript\(true\)/);
 });
 
@@ -211,7 +211,7 @@ test("reels-studio 4-step wizard shell (Step 0 Hook + Step 1 basics + Step 2/3) 
 test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /function regenerateOptions\(/);
   assert.match(html, /function regenerateContent\(/);
   assert.match(html, /重新生成會拎走現有揀揀/);
@@ -222,8 +222,8 @@ test("reels-studio regenerate wrappers + dynamic labels + SW v18", async () => {
   assert.match(html, /addEventListener\("click", regenerateContent\)/);
   // generateAiOptions must re-render via renderPlan so the options label flips to "重新生成選項"
   assert.match(html, /saveReels\(state\);\s*renderPlan\(\);/);
-  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\)/);
-  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\)/);
+  assert.match(html, /(btn\.textContent = \(activeReel\(\)\?\.aiOptions \? "重新生成選項" : "AI 生成選項"\))|(labelGen:\s*\(r\)\s*=>\s*\(r\.aiOptions \? "重新生成選項" : "AI 生成選項"\))/);
+  assert.match(html, /(btn\.textContent = \(activeReel\(\)\?\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\))|(labelGen:\s*\(r\)\s*=>\s*\(r\.aiGeneratedAt \? "重新生成內容" : "生成完整內容"\))/);
 });
 
 test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async () => {
@@ -264,7 +264,7 @@ test("reels-studio Hook generation + scoring + candidate cards (Step 0)", async 
   assert.match(html, /留人理由/);
   assert.match(html, /公式/);
   assert.match(html, /copy\.hookCandidates = \[\]/);
-  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\)/);
+  assert.match(html, /(btn\.textContent = \(activeReel\(\)\?\.hookCandidates\?\.length \? "重新生成 Hook" : "AI 生成 Hook"\))|(labelGen:\s*\(r\)\s*=>\s*\(r\.hookCandidates && r\.hookCandidates\.length \? "重新生成 Hook" : "AI 生成 Hook"\))/);
   assert.match(html, /const BRAND_REFERENCE = /);
   assert.match(html, /function refBlock\(/);
   assert.match(html, /reference:\s*""/);
@@ -351,7 +351,7 @@ test("reels-studio Stage C script review + polish", async () => {
   assert.match(html, /語氣：太似 AI/);
   assert.match(html, /r\.interactionGoal \|\| "（未定）"/);
   assert.match(html, /AI 建議優化/);
-  assert.match(html, /btn\.textContent = \(activeReel\(\)\?\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\)/);
+  assert.match(html, /(btn\.textContent = \(activeReel\(\)\?\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\))|(labelGen:\s*\(r\)\s*=>\s*\(r\.scriptReview \? "重新檢查腳本" : "AI 檢查腳本"\))/);
   assert.match(html, /用修正版覆寫現有腳本/);
   assert.match(html, /用修正版覆寫現有 caption/);
   assert.match(html, /copy\.scriptReview = null/);
@@ -360,7 +360,7 @@ test("reels-studio Stage C script review + polish", async () => {
 test("reels-studio v3 migration + inferWizardStep + SW v20", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /const REEL_SCHEMA_VERSION = 5/);
   assert.match(html, /function migrateReelToV3\(/);
   assert.match(html, /function migrateReelToV4\(/);
@@ -417,7 +417,7 @@ test("reels-studio aiPicks 6-field shape + migrate transform", async () => {
 test("reels-studio Idea 批量生成 — 資料 + AI call + SW v19", async () => {
   const html = await readHtml();
   const sw = await readFile(new URL("../jessi-workflow-sw.js", import.meta.url), "utf8");
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   // state.ideaDrafts normalize
   assert.match(html, /if \(!Array\.isArray\(state\.ideaDrafts\)\) state\.ideaDrafts = \[\];/);
   assert.match(html, /if \(!state\.ideaBatchSchemaVersion\) state\.ideaBatchSchemaVersion = 1;/);
@@ -493,7 +493,7 @@ test("reels-studio Step 4 影片素材生成 prompt", async () => {
   assert.match(html, /function renderVideoPrompts\(/);
   assert.match(html, /function confirmVideoPrompts\(/);
   assert.match(html, /function copyVideoPrompts\(/);
-  assert.match(html, /callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA[^)]*\)/);
+  assert.match(html, /(callGemini\(videoPromptPrompt\(r\), VIDEO_PROMPT_SCHEMA[^)]*\))|(promptFn:\s*videoPromptPrompt,\s*schema:\s*VIDEO_PROMPT_SCHEMA)/);
   for (const id of ["ai-gen-video-prompts", "video-prompt-list", "video-master-prompt", "confirm-video-prompts", "copy-video-prompts", "video-asset-note"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -518,7 +518,7 @@ test("reels-studio Step 5 Carousel post 內容", async () => {
   assert.match(html, /function regenerateCarousel\(/);
   assert.match(html, /function renderCarousel\(/);
   assert.match(html, /function confirmCarousel\(/);
-  assert.match(html, /callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA[^)]*\)/);
+  assert.match(html, /(callGemini\(carouselPrompt\(r\), CAROUSEL_SCHEMA[^)]*\))|(promptFn:\s*carouselPrompt,\s*schema:\s*CAROUSEL_SCHEMA)/);
   for (const id of ["ai-gen-carousel", "carousel-slides", "carousel-add", "confirm-carousel"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -543,7 +543,7 @@ test("reels-studio Step 6 圖片生成 prompt", async () => {
   assert.match(html, /function renderImagePrompts\(/);
   assert.match(html, /function confirmImagePrompts\(/);
   assert.match(html, /function copyImagePrompts\(/);
-  assert.match(html, /callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA[^)]*\)/);
+  assert.match(html, /(callGemini\(imagePromptPrompt\(r\), IMAGE_PROMPT_SCHEMA[^)]*\))|(promptFn:\s*imagePromptPrompt,\s*schema:\s*IMAGE_PROMPT_SCHEMA)/);
   for (const id of ["ai-gen-image-prompts", "image-prompt-list", "confirm-image-prompts", "copy-image-prompts", "image-asset-note"]) {
     assert.match(html, new RegExp(`id="${id}"`), `missing control #${id}`);
   }
@@ -600,7 +600,7 @@ test("reels-studio 自動備份 IndexedDB + 還原 UI", async () => {
 test("reels-studio Service Worker 註冊 + 更新提示", async () => {
   const html = await readHtml();
   const sw = await readSw();
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
   assert.match(html, /navigator\.serviceWorker\.register\(\s*["']jessi-workflow-sw\.js["']/);
   assert.match(html, /location\.protocol\s*!==\s*["']file:["']/);
   assert.match(html, /updatefound/);
@@ -635,10 +635,11 @@ test("reels-studio AI 進度反饋 + 可取消（9 個 generate）", async () =>
   assert.match(html, /ai-cancel-btn/);
   assert.match(html, /@keyframes ai-spin/);
   assert.match(html, /生成中… 0s/);
-  // 9 個 generate 都用 bindAiBtnLoading
+  // 9 個 generate 都用 bindAiBtnLoading（重構後 8 個經 runAiGenerate helper 用 btnId: "xxx"，
+  // generateAiIdeas 例外保留原 getElementById("ai-generate-ideas")）
   const btnIds = ["ai-generate-hooks", "ai-generate-options", "gen-directions", "ai-generate-ideas", "ai-generate-content", "ai-gen-video-prompts", "ai-gen-carousel", "ai-gen-image-prompts", "ai-review-script"];
   for (const id of btnIds) {
-    assert.match(html, new RegExp('getElementById\\("' + id + '"\\)'));
+    assert.match(html, new RegExp('(getElementById\\("' + id + '"\\))|(btnId:\\s*"' + id + '")'));
   }
   // handleAiError 新分支
   assert.match(html, /e\.type\s*===\s*["']cancelled["']/);
@@ -767,7 +768,91 @@ test("reels-studio asset 卡（影片 + 圖片）", async () => {
   assert.match(html, /\.asset-preview/);
 });
 
-test("reels-studio SW cache bumped to v22", async () => {
+test("reels-studio SW cache bumped to v23", async () => {
   const sw = await readSw();
-  assert.match(sw, /jessi-workflow-cache-v22/);
+  assert.match(sw, /jessi-workflow-cache-v23/);
+});
+
+test("reels-studio 批4 T4+T2 hardening（window.open guard + search debounce）", async () => {
+  const html = await readHtml();
+  // T4: window.open 兩處加 https scheme guard + noopener（regex literal source 含反斜線逸出）
+  assert.match(html, /\/\^https\?:\\\/\\\/\//);
+  assert.match(html, /noopener,noreferrer/);
+  // T2: #reel-search input debounce
+  assert.match(html, /_searchTimer/);
+  assert.match(html, /clearTimeout\(_searchTimer\)/);
+  assert.match(html, /setTimeout\([^,]+,\s*200\)/);
+});
+
+test("reels-studio 批4 #13 keyboard shortcuts", async () => {
+  const html = await readHtml();
+  assert.match(html, /function tryAdvanceWizard\(\)/);
+  assert.match(html, /function switchTab\(/);
+  assert.match(html, /ArrowLeft/);
+  assert.match(html, /ArrowRight/);
+  assert.match(html, /metaKey \|\| e\.ctrlKey/);
+  assert.match(html, /preventDefault\(\)/);
+  assert.match(html, /switchTab\("plan-panel"\)/);
+  assert.match(html, /switchTab\("shoot-panel"\)/);
+  assert.match(html, /switchTab\("review-panel"\)/);
+  // inField 過濾
+  assert.match(html, /tagName === "INPUT" \|\| tag === "TEXTAREA"/);
+});
+
+test("reels-studio 批4 #16 runAiGenerate helper", async () => {
+  const html = await readHtml();
+  assert.match(html, /async function runAiGenerate\(/);
+  assert.match(html, /regenConfirm/);
+  assert.match(html, /preGuard/);
+  assert.match(html, /postRender/);
+  // 9 個 generate 函式名仍在
+  assert.match(html, /function generateAiHooks/);
+  assert.match(html, /function generateAiOptions/);
+  assert.match(html, /function generateAiDirections/);
+  assert.match(html, /function generateAiIdeas/);
+  assert.match(html, /function generateAiContent/);
+  assert.match(html, /function generateVideoPrompts/);
+  assert.match(html, /function generateCarousel/);
+  assert.match(html, /function generateImagePrompts/);
+  assert.match(html, /function reviewScript/);
+  // 8 個 regenerate wrapper 名仍在（ideas 嘅 confirm inline 喺 generate 內）
+  assert.match(html, /function regenerateHooks/);
+  assert.match(html, /function regenerateDirections/);
+  assert.match(html, /function regenerateOptions/);
+  assert.match(html, /function regenerateContent/);
+  assert.match(html, /function regenerateVideoPrompts/);
+  assert.match(html, /function regenerateCarousel/);
+  assert.match(html, /function regenerateImagePrompts/);
+  assert.match(html, /function regenerateReview/);
+});
+
+test("reels-studio 批4 #11 template library", async () => {
+  const html = await readHtml();
+  // state.templates normalize
+  assert.match(html, /state\.templatesSchemaVersion/);
+  assert.match(html, /if \(!Array\.isArray\(state\.templates\)\) state\.templates = \[\]/);
+  // 4 個函式
+  assert.match(html, /function saveReelAsTemplate\(/);
+  assert.match(html, /function newReelFromTemplate\(/);
+  assert.match(html, /function deleteTemplate\(/);
+  assert.match(html, /function renderTemplateLibrary\(/);
+  // toolbar 掣 + panel
+  assert.match(html, /id="save-template"/);
+  assert.match(html, /id="new-from-template"/);
+  assert.match(html, /id="template-library-panel"/);
+  // 中文字串
+  assert.match(html, /存做模板/);
+  assert.match(html, /由模板開新/);
+  assert.match(html, /模板庫/);
+});
+
+test("reels-studio 批4 #12 renderPlan 局部更新防 focus 跳", async () => {
+  const html = await readHtml();
+  // renderSegList 新局部 renderer
+  assert.match(html, /function renderSegList\(/);
+  // .use-hook click 改用 renderHookCandidates + sync #p-hook（唔再 renderPlan）
+  assert.match(html, /renderHookCandidates\(\);\s*const hookEl = document\.getElementById\("p-hook"\)/);
+  // applyPolishedScript / applyPolishedCaption / assembleCaption 改直接寫 textarea
+  assert.match(html, /const scriptEl = document\.getElementById\("p-script"\)/);
+  assert.match(html, /const captionEl = document\.getElementById\("p-caption"\)/);
 });
