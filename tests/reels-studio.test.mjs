@@ -771,3 +771,14 @@ test("reels-studio SW cache bumped to v22", async () => {
   const sw = await readSw();
   assert.match(sw, /jessi-workflow-cache-v22/);
 });
+
+test("reels-studio 批4 T4+T2 hardening（window.open guard + search debounce）", async () => {
+  const html = await readHtml();
+  // T4: window.open 兩處加 https scheme guard + noopener（regex literal source 含反斜線逸出）
+  assert.match(html, /\/\^https\?:\\\/\\\/\//);
+  assert.match(html, /noopener,noreferrer/);
+  // T2: #reel-search input debounce
+  assert.match(html, /_searchTimer/);
+  assert.match(html, /clearTimeout\(_searchTimer\)/);
+  assert.match(html, /setTimeout\([^,]+,\s*200\)/);
+});

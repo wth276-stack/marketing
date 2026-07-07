@@ -685,7 +685,15 @@
       const qEl = document.getElementById("reel-search");
       const fEl = document.getElementById("reel-status-filter");
       const sEl = document.getElementById("reel-sort");
-      if (qEl) { qEl.value = prefs.q || ""; qEl.addEventListener("input", () => { state.reelListPrefs.q = qEl.value; saveReels(state); renderReelList(); }); }
+      if (qEl) {
+        qEl.value = prefs.q || "";
+        let _searchTimer = null;
+        qEl.addEventListener("input", () => {
+          state.reelListPrefs.q = qEl.value;
+          clearTimeout(_searchTimer);
+          _searchTimer = setTimeout(() => { saveReels(state); renderReelList(); }, 200);
+        });
+      }
       if (fEl) { fEl.value = prefs.statusFilter || "all"; fEl.addEventListener("change", () => { state.reelListPrefs.statusFilter = fEl.value; saveReels(state); renderReelList(); }); }
       if (sEl) { sEl.value = prefs.sort || "updated"; sEl.addEventListener("change", () => { state.reelListPrefs.sort = sEl.value; saveReels(state); renderReelList(); }); }
     }
@@ -2563,7 +2571,7 @@
       const videoOpenBtn = panel.querySelector("#video-asset-open");
       if (videoOpenBtn) videoOpenBtn.addEventListener("click", () => {
         const r2 = activeReel(); if (!r2) return;
-        if (r2.videoAssetUrl) window.open(r2.videoAssetUrl, "_blank");
+        if (r2.videoAssetUrl && /^https?:\/\//i.test(r2.videoAssetUrl)) window.open(r2.videoAssetUrl, "_blank", "noopener,noreferrer");
       });
       const videoNoteEl = panel.querySelector("#video-asset-note");
       if (videoNoteEl) videoNoteEl.addEventListener("input", () => {
@@ -2610,7 +2618,7 @@
       const imageOpenBtn = panel.querySelector("#image-asset-open");
       if (imageOpenBtn) imageOpenBtn.addEventListener("click", () => {
         const r2 = activeReel(); if (!r2) return;
-        if (r2.imageAssetUrl) window.open(r2.imageAssetUrl, "_blank");
+        if (r2.imageAssetUrl && /^https?:\/\//i.test(r2.imageAssetUrl)) window.open(r2.imageAssetUrl, "_blank", "noopener,noreferrer");
       });
       const imageNoteEl = panel.querySelector("#image-asset-note");
       if (imageNoteEl) imageNoteEl.addEventListener("input", () => {
