@@ -181,9 +181,9 @@
 
 ### 3.4 Service worker cache 版號
 
-- 改 `assets/jessi-workflow.js` → bump `jessi-workflow-sw.js` 嘅 cache 版號（`jessi-workflow-cache-vXX`）。
-- `jessi-beauty-marketing-workflow.html` 引用 `assets/jessi-workflow.js?v=...` → bump query。
-- `reels-studio.html` 若有自己 SW／`?v=` 要 bump，寫計畫時 verify。
+- `jessi-workflow-sw.js` 嘅 `CACHE_NAME` 由 `jessi-workflow-cache-v23` bump 到 **`v24`**。原因：PRECACHE_PATHS 包含 `jessi-beauty-marketing-workflow.html`、`reels-studio.html`、`beauty-salon-marketing-tracker.html`、`assets/jessi-workflow.js`，呢幾個檔嘅 inline 內容／asset 內容都會改，precache hash 會變，唔 bump 會用舊快取。
+- `reels-studio.html` 共用同一個 `jessi-workflow-sw.js`（L3157 註冊），冇自己獨立 SW，冇自己 `?v=` query（內容全 inline），所以唔使另 bump。
+- `jessi-beauty-marketing-workflow.html` 引用 `assets/jessi-workflow.js?v=20260626f` → bump 做 `?v=20260709a`（淨係改 .js，.css 冇改所以唔 bump）。
 
 ---
 
@@ -226,6 +226,5 @@
 
 ### 4.5 風險
 
-- `reels-studio.html` 係單檔，要確認有冇自己 SW／`?v=` 要 bump（寫計畫時 verify）。
 - `instagram美容院營運實戰手冊.html` 改品牌詞可能令通用性下降——克制，只改逆齡範例。
 - 13 個檔用詞一致性靠對照表，可能漏——驗收階段 grep 兜底。
