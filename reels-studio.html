@@ -210,11 +210,11 @@
       <div id="reel-items"></div>
       <div id="template-library-panel" class="idea-batch-panel" hidden></div>
       <div id="idea-batch-panel" class="idea-batch-panel" hidden>
-        <div class="field"><label>主題</label><input id="idea-batch-topic" placeholder="例如 HIFU / 夏日控油 / 產後修腹"></div>
+        <div class="field"><label>主題</label><input id="idea-batch-topic" placeholder="例如 暗黃泛紅 / 痘印 / 底妝唔貼"></div>
         <div class="field"><label>重點提示（選填）</label><input id="idea-batch-core" placeholder="想強調嘅角度或賣點，可唔填"></div>
         <div class="idea-batch-toolbar">
           <button type="button" class="primary" id="ai-generate-ideas">AI 生成 Idea</button>
-          <span class="idea-batch-note">品牌資料 + 受眾（30-55 歲女性）已自動套用</span>
+          <span class="idea-batch-note">品牌資料 + 受眾已自動套用</span>
         </div>
         <div id="idea-draft-count" class="idea-draft-count"></div>
         <div id="idea-drafts"></div>
@@ -318,25 +318,23 @@
       save: ["save 低呢條，下次跟住做", "save 低下次睇返", "呢個框架遲啲用得返，save 先"],
       share: ["send 畀一個成日卡住嘅朋友", "轉畀你覺得會需要嘅人", "send 畀身邊都係咁嘅人"]
     };
-    const AUDIENCE = "30-55 歲女性（香港），關注美容保養（肌膚 / 身形 / 自我照顧）";
+    const AUDIENCE = "化妝都覺得塊面唔乾淨、粉底唔貼、想淡妝但唔敢淡妝嘅女士（香港）";
     const BRAND_REFERENCE = [
-      "品牌：JESSI BEAUTY（尖沙咀「逆齡專家」）。目標客：30-55 歲女士，開始面對鬆弛、皺紋、膚質變差、色斑。",
-      "語氣：專業、高級、溫柔、可信、唔 hard sell；廣東話為主。客人怕動刀、怕誇張、怕被 sell，想自然、想有人專業分析。",
-      "差異化：逆齡係「階段性 / 綜合療程」——老化分層次（結構鬆弛 / 膚質底子 / 色素斑），唔靠一部機，要分層處理。",
-      "主賣 4 個逆齡療程（內容主推）：",
-      "  ① Focus Dual（RF 微針 + HIFU，提拉緊緻；單頭試做 $1,980 / 雙頭 $3,680）——針對結構鬆弛、輪廓、法令紋。",
-      "  ② Jessi Glow（Doctor Peel 煥膚；試做 $680/$980，原價 $1,980）——針對角質粗糙、暗啞、提亮。",
-      "  ③ Glaskin 玻璃肌（試做 $1,980）——亮澤水光、膚質底子。",
-      "  ④ Pico 三文治（Pico Extreme + 多步驟淡斑；試做 $980）——荷爾蒙斑、色斑、暗沉。",
-      "輔助療程（唔好當主賣 push）：RP 精華定制處方（Rxpert 指紋式定制）、Aqual Peel、HD 海藻矽針、無針破壁+外泌體等。",
-      "Claim-Safety（香港法規，必守）：唔好講「保證見效/永久/一次淡斑/即時拉提/醫治根治/無痛/瘦面減脂/取代手術」；改成「效果因人而異/有助改善/持續護理有助維持/舒適度因人而異」。",
-      "核心 Offer + CTA：主 CTA 係「30 分鐘免費皮膚分析」（儀器檢測+專人講解，可只分析唔買）。兩步式：內容共鳴→留言/DM 關鍵字→客服 send 3 條自測問題→免費分析→WhatsApp 預約。常見關鍵字：輪廓/膚質/斑/分析。",
+      "品牌：JESSI BEAUTY（Jessi Glow｜素顏底色重整療程）。目標客：化妝都覺得塊面唔乾淨、粉底唔貼、泛紅痘印遮極都見、素顏冇精神、想淡妝但唔敢淡妝嘅女士（唔寫死年齡）。",
+      "固定教育句：底色唔乾淨 = 暗黃、泛紅、痘印、膚色花、毛孔陰影、粗糙反光差，令塊面望落灰、濁、化妝都唔貼。",
+      "語氣：專業、高級、溫柔、可信、唔 hard sell；廣東話為主。客人怕誇張、怕被 sell、怕假，想自然、想有人專業分析底色。",
+      "差異化：三層底色重整——清底（Dactor Peel）× 修色（CC Glow）× 養光（Mask+燈），唔靠一部機，要分層處理。",
+      "主賣：Jessi Glow 素顏底色重整療程（內容主推）= Dactor Peel 清底 + CC Glow 修色 + Mask+燈 養光；療程 5 步：皮膚分析→清潔→Dactor Peel→CC Glow→Mask+燈；試做 $680（不含燈）/$980（含燈），原價 $1,980。",
+      "CC Glow 唔係粉底，係帶天然色素嘅護膚精華（RH寡肽/熊果素/玻尿酸）；5 色號 101-105 + 110 保濕精華。迷思教育可講「CC Glow 不是傳統駐顏粉底」。",
+      "輔助療程（保留資料，唔好當內容主推）：Focus Dual（RF 微針+HIFU，單頭 $1,980/雙頭 $3,680，提拉緊緻）、Glaskin 玻璃肌（$1,980，亮澤水光）、Pico 三文治（$980，淡斑）、RP 精華定制處方、Aqual Peel、HD 海藻矽針、無針破壁+外泌體等。",
+      "Claim-Safety（香港法規，必守）：唔好講「保證見效/永久/一次淡斑/即時底色變白/醫治根治/無痛/瘦面減脂/取代手術」；改成「效果因人而異/有助改善/持續護理有助維持/舒適度因人而異」。Dactor Peel 對外講「低刺激、無酸類剝脫感、含乳酸菌萃取幫助膚況穩定」，唔好講「無化學成分/抗炎抗菌/治療濕疹/療效倍數」。",
+      "核心 Offer + CTA：主 CTA 係「30 分鐘免費皮膚分析」（儀器檢測+專人講解，可只分析唔買；分析重點係分清你係暗黃型/泛紅型/痘印型/毛孔型）。兩步式：內容共鳴→留言/DM 關鍵字→客服 send 3 條自測問題→免費分析→WhatsApp 預約。常見關鍵字：暗黃/泛紅/痘印/底妝唔貼/分析。",
       "價錢/試做價留到後段（免費分析後、Week 3-4）先講，唔好一開波 sell 價。",
       "AI 只可以用呢份資料嘅療程名、價錢、定位，唔准自己作療效、價錢、療程名。"
     ].join("\n");
     function refBlock(r) {
       return [
-        "【品牌資料（只用嚟限制療程名/價錢/claim-safety，唔准作療程/價錢/療效；亦唔好用嚟決定內容主題方向——內容永遠以用家輸入嘅主題為準；如果主題同品牌資料嘅療程無直接關連，就圍繞主題本身出內容，唔好將主題強行拉去逆齡/面部鬆弛/輪廓等品牌預設方向）】",
+        "【品牌資料（只用嚟限制療程名/價錢/claim-safety，唔准作療程/價錢/療效；亦唔好用嚟決定內容主題方向——內容永遠以用家輸入嘅主題為準；如果主題同品牌資料嘅療程無直接關連，就圍繞主題本身出內容，唔好將主題強行拉去底色/暗黃/泛紅/痘印/毛孔等品牌預設方向）】",
         BRAND_REFERENCE,
         r.reference && r.reference.trim() ? "【用家補充參考資料】\n" + r.reference.trim() : ""
       ].filter(Boolean).join("\n");
@@ -1401,7 +1399,7 @@
         "",
         "出 12-15 個 Reel idea，散佈以下結構版型，每型 1-2 條：反差型 / 清單型 / 結果先行型 / 問題解答型 / 拆解型 / 錯誤型 / 教學型 / 故事型 / 對比型 / 步驟型。",
         "每個 idea 含：title（可做片標題嘅一句，具體可拍）、structure（上述 10 型之一）、coreMessage（一條片一個重點）、rationale（一句解釋點解呢個 idea 啱呢個結構）。",
-        "準則：idea 要具體、可拍、同主題相關；避免空泛（例如「美容小貼士」）；每個 idea 一個清晰可拍嘅切入點。內容方向必須緊貼用家主題——如果主題係身形/減肥/身體等唔係逆齡面部嘅範疇，就圍繞主題本身出 idea，唔好將主題強行拉去面部鬆弛/輪廓/色斑等品牌預設方向。品牌資料只用嚟限制療程名、價錢、定位，唔准自己作療效、價錢、療程名。",
+        "準則：idea 要具體、可拍、同主題相關；避免空泛（例如「美容小貼士」）；每個 idea 一個清晰可拍嘅切入點。內容方向必須緊貼用家主題——如果主題係身形/減肥/身體等唔係底色重整嘅範疇，就圍繞主題本身出 idea，唔好將主題強行拉去暗黃/泛紅/痘印/毛孔等品牌預設方向。品牌資料只用嚟限制療程名、價錢、定位，唔准自己作療效、價錢、療程名。",
         "輸出 JSON：ideas 陣列，每項含 title、structure、coreMessage、rationale。嚴格跟 JSON schema。"
       ].filter(Boolean).join("\n");
     }
@@ -1700,7 +1698,7 @@
         "Carousel slide 內容：",
         slides || "（無 carousel，請按主題出 6 張）",
         "",
-        "風格固定：美容沙龍質感、香港 30-55 歲女性、自然光、品牌色 #c96b8a 點綴、乾淨背景、IG carousel 尺度 4:5。",
+        "風格固定：美容沙龍質感、香港女士、自然光、品牌色 #c96b8a 點綴、乾淨背景、IG carousel 尺度 4:5。",
         "cover slide 要吸睛、content slide 要清晰可讀（留位疊字）、cta slide 要留白可疊字。",
         "每條 prompt 對應一張 slide，slideIndex 由 0 開始。嚴格跟 JSON schema。"
       ].join("\n");
@@ -1744,7 +1742,7 @@
         "逐鏡結構：",
         segs || "（無逐鏡資料，請按主題出 4-6 鏡）",
         "",
-        "【跨鏡一致性 — 最重要】全部鏡頭必須保持：同一個女主角（30-55 歲香港女性、自然妝容、唔濃妝、乾淨造型）、同一個美容沙龍場景（乾淨、木色／白色調、品牌色 #c96b8a 點綴）、統一色調（柔和自然光、暖白平衡、輕微 film grain）、統一服裝。呢啲連貫元素寫喺 masterPrompt 同 overallStyle，每鏡 visualPrompt 都要呼應。",
+        "【跨鏡一致性 — 最重要】全部鏡頭必須保持：同一個女主角（香港女性、自然妝容、唔濃妝、乾淨造型）、同一個美容沙龍場景（乾淨、木色／白色調、品牌色 #c96b8a 點綴）、統一色調（柔和自然光、暖白平衡、輕微 film grain）、統一服裝。呢啲連貫元素寫喺 masterPrompt 同 overallStyle，每鏡 visualPrompt 都要呼應。",
         "",
         "每鏡 prompt 欄位要求：",
         "- visualPrompt：用英文寫一條完整 scene description（唔好淨係散關鍵詞），要包含：人物（年齡／性別／造型／情緒）、具體動作（例如 'applying serum to cheek with gentle fingertips'）、場景（'clean beauty salon, white counter, large mirror'）、道具（serum bottle, towel, green plant）、留位畀 IG overlay text（唔好生成中文字）。要具體到 AI 一睇就生成到正確畫面。",
@@ -3008,7 +3006,7 @@
       return [
         "【Reels 拍片 brief — Jessi Beauty】",
         "主題：" + (r.title || "（待填）"),
-        "品牌：Jessi Beauty（尖沙咀逆齡專家，30-55 歲女士）",
+        "品牌：Jessi Beauty（Jessi Glow 素顏底色重整，針對底色問題嘅女士）",
         "參考資料：" + (r.reference || "（無）"),
         "結構：" + (r.structure || "（待選）"),
         "頭 1–2 秒鉤子：" + (r.hook || "（待填）"),
