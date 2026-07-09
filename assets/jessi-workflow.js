@@ -624,8 +624,8 @@
   // ── 營銷工作台（手冊 Ch.3–14）────────────────────────────
     const STRATEGY_FIELDS = [
       { key: "goal", label: "商業目標", ph: "免費分析預約、到店成交、品牌知名度…" },
-      { key: "audience", label: "核心受眾", ph: "35–49 歲女性、尖沙咀、在意輪廓鬆弛…" },
-      { key: "problems", label: "受眾問題", ph: "鬆弛、斑、膚質暗、怕假、唔知次序…" },
+      { key: "audience", label: "核心受眾", ph: "化妝都唔乾淨、粉底唔貼、想淡妝但唔敢嘅女士、尖沙咀…" },
+      { key: "problems", label: "受眾問題", ph: "暗黃、泛紅、痘印、毛孔粗糙、底妝唔貼、怕假、唔知點揀療程…" },
       { key: "positioning", label: "定位句", ph: "我們幫助○○，透過○○，達到○○" },
       { key: "proof", label: "證明", ph: "儀器分析、案例、老闆經驗、客人原話…" },
       { key: "platform", label: "主平台", ph: "Instagram（Reels + Carousel + Stories）" },
