@@ -479,3 +479,54 @@ export function buildScoreboard(run) {
     passedAssertions,
   };
 }
+
+// ============================================================
+// 11. joinContentByReelId
+// ============================================================
+export function joinContentByReelId(contentItems, reels) {
+  const items = Array.isArray(contentItems) ? contentItems : [];
+  const reelList = Array.isArray(reels) ? reels : [];
+  const reelById = new Map();
+  for (const r of reelList) {
+    if (r && r.id != null) reelById.set(String(r.id), r);
+  }
+  const SUM_KEYS = ["reach", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue"];
+  const SEV_RANK = { high: 3, medium: 2, low: 1 };
+  const groups = new Map(); // reelId -> { reel, items }
+  const unlinked = [];
+  for (const item of items) {
+    const reelId = item && item.reelId != null ? String(item.reelId).trim() : "";
+    if (!reelId) { unlinked.push({ item, reason: "no_reel_id" }); continue; }
+    const reel = reelById.get(reelId);
+    if (!reel) { unlinked.push({ item, reason: "reel_not_found", reelId }); continue; }
+    if (!groups.has(reelId)) groups.set(reelId, { reel, items: [] });
+    groups.get(reelId).items.push(item);
+  }
+  const joined = [];
+  for (const [reelId, g] of groups) {
+    const metrics = g.items.map((it) => mapTrackerContentToPerformanceMetrics(it));
+    const agg = {};
+    for (const k of SUM_KEYS) agg[k] = metrics.reduce((s, m) => s + toNum(m[k]), 0);
+    const rets = metrics.map((m) => toNum(m.retention));
+    agg.retention = rets.length ? rets.reduce((s, v) => s + v, 0) / rets.length : 0;
+    const byType = new Map();
+    for (const m of metrics) {
+      for (const ins of classifyPerformanceLearning(m)) {
+        const prev = byType.get(ins.type);
+        if (!prev || (SEV_RANK[ins.severity] || 0) > (SEV_RANK[prev.severity] || 0)) byType.set(ins.type, ins);
+      }
+    }
+    joined.push({
+      reelId,
+      reel: {
+        id: g.reel.id,
+        title: g.reel.title || g.reel.id,
+        loopReviewTotal: g.reel.loopReview && typeof g.reel.loopReview.total === "number" ? g.reel.loopReview.total : null,
+      },
+      contentItems: g.items,
+      metrics: agg,
+      insights: [...byType.values()],
+    });
+  }
+  return { joined, unlinked };
+}

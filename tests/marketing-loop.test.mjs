@@ -14,6 +14,7 @@ import {
   mapTrackerContentToPerformanceMetrics,
   classifyPerformanceLearning,
   buildScoreboard,
+  joinContentByReelId,
   FEATURE_FLAGS,
   RUBRIC,
 } from "../assets/marketing-loop-engine.mjs";
@@ -397,6 +398,55 @@ test("reels-studio loopReview survives normalize (additive, schema untouched)", 
   assert.match(html, /\.\.\.base,\s*\.\.\.r/);
   // schema version constant unchanged
   assert.match(html, /REEL_STATUSES\s*=\s*\["planning",\s*"readyShoot",\s*"shooting",\s*"readyEdit",\s*"readyPublish",\s*"published",\s*"scored"\]/);
+});
+
+// ============================================================
+// 14. joinContentByReelId
+// ============================================================
+test("joinContentByReelId groups by reelId, separates unlinked, aggregates metrics, unions per-item insights", async () => {
+  const content = await loadFixture("join_reelid_content.json");
+  const reels = await loadFixture("join_reelid_reels.json");
+  const { joined, unlinked } = joinContentByReelId(content, reels);
+
+  assert.equal(joined.length, 2, `expected 2 joined groups, got ${joined.length}`);
+
+  const aaa = joined.find((g) => g.reelId === "r_aaa");
+  assert.ok(aaa, "r_aaa group missing");
+  assert.equal(aaa.reel.title, "暗瘡印反差");
+  assert.equal(aaa.reel.loopReviewTotal, 92);
+  assert.equal(aaa.contentItems.length, 2);
+  assert.equal(aaa.metrics.reach, 5000, `reach sum, got ${aaa.metrics.reach}`);
+  assert.equal(aaa.metrics.dm, 30, `dm sum, got ${aaa.metrics.dm}`);
+  assert.equal(aaa.metrics.retention, 47.5, `retention avg, got ${aaa.metrics.retention}`);
+  const aaaTypes = aaa.insights.map((i) => i.type);
+  assert.ok(aaaTypes.includes("education_strong_cta_weak"), `r_aaa insights: ${JSON.stringify(aaaTypes)}`);
+
+  const bbb = joined.find((g) => g.reelId === "r_bbb");
+  assert.ok(bbb, "r_bbb group missing");
+  assert.equal(bbb.reel.loopReviewTotal, null);
+  const bbbTypes = bbb.insights.map((i) => i.type);
+  assert.ok(bbbTypes.includes("hook_or_opening_failure"), `r_bbb insights: ${JSON.stringify(bbbTypes)}`);
+  assert.ok(bbbTypes.includes("weak_topic_or_weak_creative"), `r_bbb insights: ${JSON.stringify(bbbTypes)}`);
+
+  assert.equal(unlinked.length, 2, `expected 2 unlinked, got ${unlinked.length}`);
+  const reasons = unlinked.map((u) => u.reason).sort();
+  assert.deepEqual(reasons, ["no_reel_id", "reel_not_found"]);
+});
+
+test("joinContentByReelId is deterministic: same input twice yields identical output", async () => {
+  const content = await loadFixture("join_reelid_content.json");
+  const reels = await loadFixture("join_reelid_reels.json");
+  const a = JSON.stringify(joinContentByReelId(content, reels));
+  const b = JSON.stringify(joinContentByReelId(content, reels));
+  assert.equal(a, b);
+});
+
+test("joinContentByReelId tolerates empty inputs without NaN", () => {
+  const { joined, unlinked } = joinContentByReelId([], []);
+  assert.equal(joined.length, 0);
+  assert.equal(unlinked.length, 0);
+  const { joined: j2 } = joinContentByReelId(undefined, undefined);
+  assert.equal(j2.length, 0);
 });
 
 // ============================================================
