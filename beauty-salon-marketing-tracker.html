@@ -726,6 +726,10 @@
             <tbody id="content-rows"></tbody>
           </table>
         </div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn" type="button" id="content-loop-btn">分析內容成效</button>
+        </div>
+        <div id="content-loop-output" class="table-wrap" style="margin-top:10px"></div>
       </section>
 
       <section id="lead-table" aria-labelledby="lead-table-title">
@@ -1190,6 +1194,45 @@
       return prompt;
     }
 
+    async function runContentLoop() {
+      const btn = document.getElementById("content-loop-btn");
+      const out = document.getElementById("content-loop-output");
+      if (btn) { btn.disabled = true; btn.textContent = "分析中…"; }
+      try {
+        const engine = await import("./assets/marketing-loop-engine.mjs");
+        const reels = readReelsForPicker();
+        const result = engine.joinContentByReelId(contentItems, reels);
+        if (out) out.innerHTML = renderContentLoopResult(result);
+      } catch (e) {
+        alert("Loop engine 載入失敗：" + (e && e.message ? e.message : String(e)));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "分析內容成效"; }
+      }
+    }
+
+    function renderContentLoopResult(result) {
+      const { joined, unlinked } = result || {};
+      if (!contentItems.length) return '<p class="muted">未有內容記錄。出街後記返每條成效再分析。</p>';
+      const parts = [];
+      if (!joined || !joined.length) {
+        parts.push('<p class="muted">未有內容連結到 Reel。用表單嘅 Reel picker 連結後再分析。</p>');
+      } else {
+        parts.push('<table><thead><tr><th>Reel</th><th>Loop 分</th><th>Reach</th><th>Saves</th><th>DM</th><th>預約</th><th>成效洞察</th></tr></thead><tbody>');
+        for (const g of joined) {
+          const score = g.reel.loopReviewTotal == null ? "未跑 Loop" : g.reel.loopReviewTotal;
+          const insightText = g.insights.length
+            ? g.insights.map((i) => i.type + "（" + i.severity + "）：" + i.recommendation).join("；")
+            : "無明確洞察";
+          parts.push("<tr><td>" + escapeHtml(g.reel.title) + "</td><td>" + score + "</td><td>" + g.metrics.reach + "</td><td>" + g.metrics.saves + "</td><td>" + g.metrics.dm + "</td><td>" + g.metrics.booking + "</td><td>" + escapeHtml(insightText) + "</td></tr>");
+        }
+        parts.push("</tbody></table>");
+      }
+      if (unlinked && unlinked.length) {
+        parts.push('<p class="muted">' + unlinked.length + " 條內容未連結 Reel（建議用表單 Reel picker 補連）。</p>");
+      }
+      return parts.join("");
+    }
+
     function renderAll() {
       renderDashboard();
       populateFilters();
@@ -1473,6 +1516,8 @@
       }
     });
     document.getElementById("content-entry-form").addEventListener("submit", addContent);
+    document.getElementById("content-loop-btn").addEventListener("click", runContentLoop);
+    document.getElementById("c-reel").addEventListener("focus", populateReelPicker);
     document.getElementById("export-content-json").addEventListener("click", exportContentJson);
     document.getElementById("import-content-json").addEventListener("change", importContentJsonFile);
     document.getElementById("export-content-csv").addEventListener("click", exportContentCsv);

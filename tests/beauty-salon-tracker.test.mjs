@@ -113,3 +113,19 @@ test("tracker content table shows Reel column and CSV exports reelId", async () 
   // CSV header includes reelId after format
   assert.match(html, /\["date",\s*"format",\s*"reelId",\s*"topic"/);
 });
+
+test("tracker adds deterministic content-loop button wiring engine via dynamic import", async () => {
+  const html = await readHtml();
+  // button + output panel
+  assert.match(html, /id="content-loop-btn"/);
+  assert.match(html, /id="content-loop-output"/);
+  // functions
+  assert.match(html, /function runContentLoop\(/);
+  assert.match(html, /function renderContentLoopResult\(/);
+  // dynamic import of the pure engine (no Gemini)
+  assert.match(html, /import\("\.\/assets\/marketing-loop-engine\.mjs"\)/);
+  // uses the join function
+  assert.match(html, /engine\.joinContentByReelId\(/);
+  // button listener
+  assert.match(html, /getElementById\("content-loop-btn"\)\.addEventListener\("click",\s*runContentLoop\)/);
+});
