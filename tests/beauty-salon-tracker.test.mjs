@@ -103,3 +103,13 @@ test("tracker adds reel picker, reelId field, and reads reels-studio key", async
   assert.match(html, /function populateReelPicker\(/);
   assert.match(html, /function readReelsForPicker\(/);
 });
+
+test("tracker content table shows Reel column and CSV exports reelId", async () => {
+  const html = await readHtml();
+  // table header has a Reel column
+  assert.match(html, /<th>日期<\/th><th>格式<\/th><th>Reel<\/th><th>主題<\/th>/);
+  // empty-state colspan bumped to 15
+  assert.match(html, /colspan="15">未有內容記錄/);
+  // CSV header includes reelId after format
+  assert.match(html, /\["date",\s*"format",\s*"reelId",\s*"topic"/);
+});

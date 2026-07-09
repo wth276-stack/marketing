@@ -719,7 +719,7 @@
           <table>
             <thead>
               <tr>
-                <th>日期</th><th>格式</th><th>主題</th><th>Hook</th><th>Reach</th><th>完播%</th>
+                <th>日期</th><th>格式</th><th>Reel</th><th>主題</th><th>Hook</th><th>Reach</th><th>完播%</th>
                 <th>Shares</th><th>Saves</th><th>DM</th><th>預約</th><th>成交</th><th>成交額</th><th>下次動作</th><th>操作</th>
               </tr>
             </thead>
@@ -877,6 +877,7 @@
     function renderContent() {
       const count = contentItems.length;
       const sum = (key) => contentItems.reduce((total, item) => total + Number(item[key] || 0), 0);
+      const reelTitleById = new Map(readReelsForPicker().map((r) => [String(r.id), r.title || r.id]));
       document.getElementById("metric-content-count").textContent = count;
       document.getElementById("metric-content-dm").textContent = sum("dm");
       document.getElementById("metric-content-booking").textContent = sum("booking");
@@ -884,7 +885,7 @@
       const tbody = document.getElementById("content-rows");
       tbody.innerHTML = "";
       if (!count) {
-        tbody.innerHTML = '<tr><td colspan="14">未有內容記錄。出街後記返每條成效，先知邊條真係帶客。</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15">未有內容記錄。出街後記返每條成效，先知邊條真係帶客。</td></tr>';
         return;
       }
       contentItems.forEach((item, index) => {
@@ -892,6 +893,7 @@
         tr.innerHTML = `
           <td>${escapeHtml(item.date)}</td>
           <td>${escapeHtml(item.format)}</td>
+          <td>${item.reelId ? escapeHtml(reelTitleById.get(item.reelId) || (item.reelId + "（已刪）")) : "-"}</td>
           <td>${escapeHtml(item.topic || "-")}</td>
           <td>${escapeHtml(item.hook || "-")}</td>
           <td>${Number(item.reach || 0)}</td>
@@ -934,7 +936,7 @@
     }
 
     function exportContentCsv() {
-      const headers = ["date", "format", "topic", "hook", "reach", "retention", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue", "action"];
+      const headers = ["date", "format", "reelId", "topic", "hook", "reach", "retention", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue", "action"];
       const rows = [headers.join(",")].concat(contentItems.map((item) => headers.map((key) => csvCell(item[key])).join(",")));
       downloadFile("jessi-content-performance.csv", rows.join("\n"), "text/csv;charset=utf-8");
     }
