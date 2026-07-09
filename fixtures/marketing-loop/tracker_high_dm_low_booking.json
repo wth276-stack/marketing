@@ -1,0 +1,21 @@
+{
+  "date": "2026-07-08",
+  "format": "Reel",
+  "topic": "淡印療程介紹",
+  "hook": "暗瘡印困擾你幾耐？DM我幫你分析",
+  "reach": 1500,
+  "retention": 40,
+  "shares": 30,
+  "saves": 40,
+  "comments": 20,
+  "dm": 120,
+  "waClicks": 10,
+  "booking": 3,
+  "visit": 3,
+  "won": 1,
+  "revenue": 0,
+  "action": "檢視報價同轉接",
+  "_loopFixture": {
+    "expectInsightType": "sales_handoff_or_offer_problem"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "date": "2026-07-07",
+  "format": "Reel",
+  "topic": "暗瘡印淡化的3個月歷程",
+  "hook": "上堂前暗瘡印通街都見到，三個月後同學問我點解皮膚咁滑",
+  "reach": 2500,
+  "retention": 38,
+  "shares": 60,
+  "saves": 300,
+  "comments": 15,
+  "dm": 5,
+  "waClicks": 3,
+  "booking": 1,
+  "visit": 1,
+  "won": 0,
+  "revenue": 0,
+  "action": "強化CTA",
+  "_loopFixture": {
+    "expectInsightType": "education_strong_cta_weak"
+  }
+}

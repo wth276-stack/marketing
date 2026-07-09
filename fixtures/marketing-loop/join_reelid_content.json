@@ -1,0 +1,7 @@
+[
+  { "date": "2026-07-01", "format": "Reel", "reelId": "r_aaa", "topic": "暗瘡印", "hook": "h1", "reach": 3000, "retention": 45, "shares": 2, "saves": 5, "comments": 1, "dm": 20, "waClicks": 4, "booking": 3, "visit": 2, "won": 1, "revenue": 800, "action": "keep" },
+  { "date": "2026-07-03", "format": "Reel", "reelId": "r_aaa", "topic": "暗瘡印", "hook": "h1", "reach": 2000, "retention": 50, "shares": 1, "saves": 120, "comments": 2, "dm": 10, "waClicks": 2, "booking": 1, "visit": 1, "won": 0, "revenue": 0, "action": "改 CTA" },
+  { "date": "2026-07-02", "format": "Reel", "reelId": "r_bbb", "topic": "保濕", "hook": "h2", "reach": 500, "retention": 20, "shares": 0, "saves": 2, "comments": 0, "dm": 3, "waClicks": 0, "booking": 0, "visit": 0, "won": 0, "revenue": 0, "action": "stop" },
+  { "date": "2026-07-04", "format": "Reel", "reelId": "", "topic": "底妝", "hook": "h3", "reach": 100, "retention": 30, "shares": 0, "saves": 1, "comments": 0, "dm": 1, "waClicks": 0, "booking": 0, "visit": 0, "won": 0, "revenue": 0, "action": "" },
+  { "date": "2026-07-05", "format": "Reel", "reelId": "r_deleted", "topic": "淡印", "hook": "h4", "reach": 100, "retention": 30, "shares": 0, "saves": 1, "comments": 0, "dm": 1, "waClicks": 0, "booking": 0, "visit": 0, "won": 0, "revenue": 0, "action": "" }
+]

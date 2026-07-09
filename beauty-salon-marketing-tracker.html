@@ -691,6 +691,11 @@
                 <option>Reel</option><option>Carousel</option><option>Stories</option>
               </select>
             </label>
+            <label>Reel
+              <select id="c-reel" name="reelId">
+                <option value="">（未連結）</option>
+              </select>
+            </label>
             <label>痛點主題<input id="c-topic" name="topic" placeholder="暗黃 / 泛紅 / 痘印 / 底妝唔貼"></label>
             <label>Hook<input id="c-hook" name="hook" placeholder="開場第一句"></label>
             <label>Reach<input id="c-reach" name="reach" type="number" min="0" step="1" placeholder="0"></label>
@@ -714,13 +719,17 @@
           <table>
             <thead>
               <tr>
-                <th>日期</th><th>格式</th><th>主題</th><th>Hook</th><th>Reach</th><th>完播%</th>
+                <th>日期</th><th>格式</th><th>Reel</th><th>主題</th><th>Hook</th><th>Reach</th><th>完播%</th>
                 <th>Shares</th><th>Saves</th><th>DM</th><th>預約</th><th>成交</th><th>成交額</th><th>下次動作</th><th>操作</th>
               </tr>
             </thead>
             <tbody id="content-rows"></tbody>
           </table>
         </div>
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn" type="button" id="content-loop-btn">分析內容成效</button>
+        </div>
+        <div id="content-loop-output" class="table-wrap" style="margin-top:10px"></div>
       </section>
 
       <section id="lead-table" aria-labelledby="lead-table-title">
@@ -815,10 +824,32 @@
       localStorage.setItem(CONTENT_KEY, JSON.stringify(contentItems));
     }
 
+    function readReelsForPicker() {
+      try {
+        const raw = localStorage.getItem("jessi-reels-studio-v1");
+        const state = raw ? JSON.parse(raw) : null;
+        return state && Array.isArray(state.reels) ? state.reels : [];
+      } catch (error) {
+        console.warn("Unable to load reels for picker", error);
+        return [];
+      }
+    }
+
+    function populateReelPicker() {
+      const sel = document.getElementById("c-reel");
+      if (!sel) return;
+      const current = sel.value || "";
+      const reels = readReelsForPicker();
+      sel.innerHTML = '<option value="">（未連結）</option>' +
+        reels.map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.title || r.id)}</option>`).join("");
+      if (current && reels.some((r) => String(r.id) === current)) sel.value = current;
+    }
+
     function normalizeContent(input) {
       return {
         date: String(input.date || today()).slice(0, 10),
         format: String(input.format || "Reel").trim(),
+        reelId: String(input.reelId || "").trim(),
         topic: String(input.topic || "").trim(),
         hook: String(input.hook || "").trim(),
         reach: Number(input.reach || 0),
@@ -850,6 +881,7 @@
     function renderContent() {
       const count = contentItems.length;
       const sum = (key) => contentItems.reduce((total, item) => total + Number(item[key] || 0), 0);
+      const reelTitleById = new Map(readReelsForPicker().map((r) => [String(r.id), r.title || r.id]));
       document.getElementById("metric-content-count").textContent = count;
       document.getElementById("metric-content-dm").textContent = sum("dm");
       document.getElementById("metric-content-booking").textContent = sum("booking");
@@ -857,7 +889,7 @@
       const tbody = document.getElementById("content-rows");
       tbody.innerHTML = "";
       if (!count) {
-        tbody.innerHTML = '<tr><td colspan="14">未有內容記錄。出街後記返每條成效，先知邊條真係帶客。</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15">未有內容記錄。出街後記返每條成效，先知邊條真係帶客。</td></tr>';
         return;
       }
       contentItems.forEach((item, index) => {
@@ -865,6 +897,7 @@
         tr.innerHTML = `
           <td>${escapeHtml(item.date)}</td>
           <td>${escapeHtml(item.format)}</td>
+          <td>${item.reelId ? escapeHtml(reelTitleById.get(item.reelId) || (item.reelId + "（已刪）")) : "-"}</td>
           <td>${escapeHtml(item.topic || "-")}</td>
           <td>${escapeHtml(item.hook || "-")}</td>
           <td>${Number(item.reach || 0)}</td>
@@ -907,7 +940,7 @@
     }
 
     function exportContentCsv() {
-      const headers = ["date", "format", "topic", "hook", "reach", "retention", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue", "action"];
+      const headers = ["date", "format", "reelId", "topic", "hook", "reach", "retention", "shares", "saves", "comments", "dm", "waClicks", "booking", "visit", "won", "revenue", "action"];
       const rows = [headers.join(",")].concat(contentItems.map((item) => headers.map((key) => csvCell(item[key])).join(",")));
       downloadFile("jessi-content-performance.csv", rows.join("\n"), "text/csv;charset=utf-8");
     }
@@ -1161,6 +1194,45 @@
       return prompt;
     }
 
+    async function runContentLoop() {
+      const btn = document.getElementById("content-loop-btn");
+      const out = document.getElementById("content-loop-output");
+      if (btn) { btn.disabled = true; btn.textContent = "分析中…"; }
+      try {
+        const engine = await import("./assets/marketing-loop-engine.mjs");
+        const reels = readReelsForPicker();
+        const result = engine.joinContentByReelId(contentItems, reels);
+        if (out) out.innerHTML = renderContentLoopResult(result);
+      } catch (e) {
+        alert("Loop engine 載入失敗：" + (e && e.message ? e.message : String(e)));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "分析內容成效"; }
+      }
+    }
+
+    function renderContentLoopResult(result) {
+      const { joined, unlinked } = result || {};
+      if (!contentItems.length) return '<p class="muted">未有內容記錄。出街後記返每條成效再分析。</p>';
+      const parts = [];
+      if (!joined || !joined.length) {
+        parts.push('<p class="muted">未有內容連結到 Reel。用表單嘅 Reel picker 連結後再分析。</p>');
+      } else {
+        parts.push('<table><thead><tr><th>Reel</th><th>Loop 分</th><th>Reach</th><th>Saves</th><th>DM</th><th>預約</th><th>成效洞察</th></tr></thead><tbody>');
+        for (const g of joined) {
+          const score = g.reel.loopReviewTotal == null ? "未跑 Loop" : g.reel.loopReviewTotal;
+          const insightText = g.insights.length
+            ? g.insights.map((i) => i.type + "（" + i.severity + "）：" + i.recommendation).join("；")
+            : "無明確洞察";
+          parts.push("<tr><td>" + escapeHtml(g.reel.title) + "</td><td>" + score + "</td><td>" + g.metrics.reach + "</td><td>" + g.metrics.saves + "</td><td>" + g.metrics.dm + "</td><td>" + g.metrics.booking + "</td><td>" + escapeHtml(insightText) + "</td></tr>");
+        }
+        parts.push("</tbody></table>");
+      }
+      if (unlinked && unlinked.length) {
+        parts.push('<p class="muted">' + unlinked.length + " 條內容未連結 Reel（建議用表單 Reel picker 補連）。</p>");
+      }
+      return parts.join("");
+    }
+
     function renderAll() {
       renderDashboard();
       populateFilters();
@@ -1168,6 +1240,7 @@
       drawFunnel();
       drawBarChart("channel-canvas", "渠道成交數", groupBy("source", true), "#305f9f");
       drawBarChart("service-canvas", "療程成交數", groupBy("service", true), "#0f7c69");
+      populateReelPicker();
       renderContent();
     }
 
@@ -1443,6 +1516,8 @@
       }
     });
     document.getElementById("content-entry-form").addEventListener("submit", addContent);
+    document.getElementById("content-loop-btn").addEventListener("click", runContentLoop);
+    document.getElementById("c-reel").addEventListener("focus", populateReelPicker);
     document.getElementById("export-content-json").addEventListener("click", exportContentJson);
     document.getElementById("import-content-json").addEventListener("change", importContentJsonFile);
     document.getElementById("export-content-csv").addEventListener("click", exportContentCsv);

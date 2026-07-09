@@ -1,0 +1,21 @@
+{
+  "date": "2026-07-09",
+  "format": "Reel",
+  "topic": "夏日保濕小貼士",
+  "hook": "夏天皮膚最怕缺水，3個保濕誤解你中咗幾多",
+  "reach": 20000,
+  "retention": 32,
+  "shares": 100,
+  "saves": 40,
+  "comments": 10,
+  "dm": 8,
+  "waClicks": 5,
+  "booking": 2,
+  "visit": 1,
+  "won": 0,
+  "revenue": 0,
+  "action": "加商業意圖CTA",
+  "_loopFixture": {
+    "expectInsightType": "attention_without_commercial_intent"
+  }
+}

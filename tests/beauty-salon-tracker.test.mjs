@@ -90,3 +90,42 @@ test("tracker declares the JavaScript contracts used by the UI", async () => {
   assert.match(html, /canvas id="service-canvas"/);
   assert.match(html, /@media print/);
 });
+
+test("tracker adds reel picker, reelId field, and reads reels-studio key", async () => {
+  const html = await readHtml();
+  // reel picker in the content form
+  assert.match(html, /id="c-reel"\s+name="reelId"/);
+  // normalizeContent carries reelId
+  assert.match(html, /reelId:\s*String\(input\.reelId\s*\|\|\s*""\)\.trim\(\)/);
+  // reads reels-studio key (read-only cross-key join)
+  assert.match(html, /jessi-reels-studio-v1/);
+  // picker populate function exists
+  assert.match(html, /function populateReelPicker\(/);
+  assert.match(html, /function readReelsForPicker\(/);
+});
+
+test("tracker content table shows Reel column and CSV exports reelId", async () => {
+  const html = await readHtml();
+  // table header has a Reel column
+  assert.match(html, /<th>日期<\/th><th>格式<\/th><th>Reel<\/th><th>主題<\/th>/);
+  // empty-state colspan bumped to 15
+  assert.match(html, /colspan="15">未有內容記錄/);
+  // CSV header includes reelId after format
+  assert.match(html, /\["date",\s*"format",\s*"reelId",\s*"topic"/);
+});
+
+test("tracker adds deterministic content-loop button wiring engine via dynamic import", async () => {
+  const html = await readHtml();
+  // button + output panel
+  assert.match(html, /id="content-loop-btn"/);
+  assert.match(html, /id="content-loop-output"/);
+  // functions
+  assert.match(html, /function runContentLoop\(/);
+  assert.match(html, /function renderContentLoopResult\(/);
+  // dynamic import of the pure engine (no Gemini)
+  assert.match(html, /import\("\.\/assets\/marketing-loop-engine\.mjs"\)/);
+  // uses the join function
+  assert.match(html, /engine\.joinContentByReelId\(/);
+  // button listener
+  assert.match(html, /getElementById\("content-loop-btn"\)\.addEventListener\("click",\s*runContentLoop\)/);
+});
