@@ -691,6 +691,11 @@
                 <option>Reel</option><option>Carousel</option><option>Stories</option>
               </select>
             </label>
+            <label>Reel
+              <select id="c-reel" name="reelId">
+                <option value="">（未連結）</option>
+              </select>
+            </label>
             <label>痛點主題<input id="c-topic" name="topic" placeholder="暗黃 / 泛紅 / 痘印 / 底妝唔貼"></label>
             <label>Hook<input id="c-hook" name="hook" placeholder="開場第一句"></label>
             <label>Reach<input id="c-reach" name="reach" type="number" min="0" step="1" placeholder="0"></label>
@@ -815,10 +820,32 @@
       localStorage.setItem(CONTENT_KEY, JSON.stringify(contentItems));
     }
 
+    function readReelsForPicker() {
+      try {
+        const raw = localStorage.getItem("jessi-reels-studio-v1");
+        const state = raw ? JSON.parse(raw) : null;
+        return state && Array.isArray(state.reels) ? state.reels : [];
+      } catch (error) {
+        console.warn("Unable to load reels for picker", error);
+        return [];
+      }
+    }
+
+    function populateReelPicker() {
+      const sel = document.getElementById("c-reel");
+      if (!sel) return;
+      const current = sel.value || "";
+      const reels = readReelsForPicker();
+      sel.innerHTML = '<option value="">（未連結）</option>' +
+        reels.map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.title || r.id)}</option>`).join("");
+      if (current && reels.some((r) => String(r.id) === current)) sel.value = current;
+    }
+
     function normalizeContent(input) {
       return {
         date: String(input.date || today()).slice(0, 10),
         format: String(input.format || "Reel").trim(),
+        reelId: String(input.reelId || "").trim(),
         topic: String(input.topic || "").trim(),
         hook: String(input.hook || "").trim(),
         reach: Number(input.reach || 0),
@@ -1168,6 +1195,7 @@
       drawFunnel();
       drawBarChart("channel-canvas", "渠道成交數", groupBy("source", true), "#305f9f");
       drawBarChart("service-canvas", "療程成交數", groupBy("service", true), "#0f7c69");
+      populateReelPicker();
       renderContent();
     }
 

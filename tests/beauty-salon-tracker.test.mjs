@@ -90,3 +90,16 @@ test("tracker declares the JavaScript contracts used by the UI", async () => {
   assert.match(html, /canvas id="service-canvas"/);
   assert.match(html, /@media print/);
 });
+
+test("tracker adds reel picker, reelId field, and reads reels-studio key", async () => {
+  const html = await readHtml();
+  // reel picker in the content form
+  assert.match(html, /id="c-reel"\s+name="reelId"/);
+  // normalizeContent carries reelId
+  assert.match(html, /reelId:\s*String\(input\.reelId\s*\|\|\s*""\)\.trim\(\)/);
+  // reads reels-studio key (read-only cross-key join)
+  assert.match(html, /jessi-reels-studio-v1/);
+  // picker populate function exists
+  assert.match(html, /function populateReelPicker\(/);
+  assert.match(html, /function readReelsForPicker\(/);
+});
