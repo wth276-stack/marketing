@@ -2758,7 +2758,14 @@
       panel.innerHTML =
         publishSection + rows +
         `<div class="field"><label>評分備註</label><textarea id="r-notes" rows="3">${escapeHtml(r.scoreNotes)}</textarea></div>` +
-        `<button type="button" id="r-save" class="primary" style="padding:8px 14px;border-radius:8px;border:0;background:var(--rose);color:#fff;cursor:pointer">儲存評分</button>`;
+        `<button type="button" id="r-save" class="primary" style="padding:8px 14px;border-radius:8px;border:0;background:var(--rose);color:#fff;cursor:pointer">儲存評分</button>` +
+        `<hr style="margin:18px 0 12px;border:0;border-top:1px solid #e8dde2">` +
+        `<div class="loop-block" style="background:#faf5f8;padding:12px;border-radius:10px">` +
+          `<h4 style="margin:0 0 6px">Loop 評分（deterministic，唔係 AI 質檢）</h4>` +
+          `<p style="margin:0 0 8px;color:#7a6f7a;font-size:13px">用 Marketing Loop Engine 跑 rubric + redline + 決策，唔呼叫 Gemini。結果存入 reel.loopReview。</p>` +
+          `<button type="button" id="loop-score-btn" style="padding:6px 12px;border-radius:8px;border:1px solid var(--rose);background:#fff;color:var(--rose);cursor:pointer">Run Loop Check</button>` +
+          `<div id="loop-review">${loopReviewHtml(r)}</div>` +
+        `</div>`;
       const bindPub = (id, key) => {
         const el = panel.querySelector(id);
         if (!el) return;
@@ -2795,6 +2802,56 @@
         renderReelList();
         alert("評分已儲存。");
       });
+      const loopBtn = panel.querySelector("#loop-score-btn");
+      if (loopBtn) loopBtn.addEventListener("click", () => runLoopScore(r));
+    }
+
+    function loopReviewHtml(r) {
+      const lr = r.loopReview;
+      if (!lr) return '<p style="margin:8px 0 0;color:#9a8f9a;font-size:13px">未跑 Loop 評分。</p>';
+      const rows = Object.entries(lr.breakdown || {})
+        .map(([k, v]) => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${k}</span><span>${v}/${({hook_stopping_power:20,pain_point_accuracy:15,education_clarity:15,professional_credibility:15,shootability:10,pacing:10,cta_naturalness:5,brand_voice:5,compliance:5})[k]||""}</span></div>`)
+        .join("");
+      const redlines = (lr.redlineViolations || []).map((v) => v.phrase).join("、");
+      const safe = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      return (
+        `<div style="margin-top:8px">` +
+          `<div style="font-size:13px"><b>總分：${lr.total}/100</b> · 決策：<b>${safe(lr.decision)}</b>${lr.canApprove === false ? "（不可自動發布）" : ""}</div>` +
+          (redlines ? `<div style="color:#b04a5a;font-size:13px;margin-top:4px">redline：${safe(redlines)}</div>` : "") +
+          (lr.failureModes && lr.failureModes.length ? `<div style="font-size:13px;margin-top:4px">失敗模式：${safe(lr.failureModes.join("、"))}</div>` : "") +
+          `<div style="margin-top:6px">${rows}</div>` +
+          (lr.revisionInstruction ? `<div style="font-size:13px;margin-top:6px;color:#5a4f5a">${safe(lr.revisionInstruction.text || lr.revisionInstruction.summary || "")}</div>` : "") +
+        `</div>`
+      );
+    }
+
+    async function runLoopScore(r) {
+      const btn = document.getElementById("loop-score-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "評分中…"; }
+      try {
+        const engine = await import("./assets/marketing-loop-engine.mjs");
+        const result = engine.runLoopOnReel(r, undefined);
+        const scoreboard = engine.buildScoreboard({ runId: "reels-studio", fixture: null, candidates: [result] });
+        r.loopReview = {
+          scoredAt: new Date().toISOString(),
+          total: result.score.total,
+          breakdown: result.score.breakdown,
+          redlineViolations: result.redlines,
+          failureModes: result.failureModes,
+          decision: result.decision.decision,
+          canApprove: result.decision.canApprove,
+          revisionInstruction: result.revisionInstruction,
+          scoreboard,
+        };
+        r.updatedAt = new Date().toISOString();
+        saveReels(state);
+        const box = document.getElementById("loop-review");
+        if (box) box.innerHTML = loopReviewHtml(r);
+      } catch (e) {
+        alert("Loop 評分失敗：" + (e && e.message ? e.message : String(e)));
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "Run Loop Check"; }
+      }
     }
 
     function downloadFile(filename, content, type) {

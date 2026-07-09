@@ -54,10 +54,11 @@
   - `nextBriefSuggestion(learnings, themeHistory, lookbackWeeks=8)` → 排除短期重複主題後給下週 angle 建議；無可推時回 `{suggestions:[], reason:"all-recent"}`
 
 ### 層 B：薄橋 `assets/marketing-loop-bridge.js`（瀏覽器層，不 import 進測試）
-- 唯一碰 localStorage 的層。**唯讀** `jessi-reels-studio-v1`、`beautySalonMarketingTracker.content.v1`、`jessi-shared-context`；**只寫一個新 key** `jessi-marketing-loop.v1`（不動既有 key、不動 status enum）。
-- 讀 `state.reels` → 餵引擎 `toMarketingBrief/toScriptCandidate/toRubricScore`；讀 `contentItems` → `toPerformanceLearning`；`joinByReelId` + `aggregateLearnings` → 寫回新 key 供 workflow 讀。
+- 唯一碰 localStorage 的層。**唯讀** `jessi-reels-studio-v1`、`beautySalonMarketingTracker.content.v1`、`jessi-shared-context`；**只寫一個新 key** `jessi-marketing-loop.v1`（canonical，不動既有 key、不動 status enum）。
+- 讀 `state.reels` → 餵引擎 `normalizeBriefFromReel/normalizeCandidateFromReel/evaluateScriptCandidate`；讀 `contentItems` → `mapTrackerContentToPerformanceMetrics`；`classifyPerformanceLearning` → 寫回新 key 供 workflow 讀。
 - MVP 不接 reels-studio 的 Gemini 路徑（引擎只吃已生成的 Reel 資料），測試永不需要 LLM。
-- 不在 MVP 接進任何 HTML（不改 UI）。
+- **Reels Studio UI 整合已包含**：復盤面板加一個「Run Loop Check」按鈕，dynamic import 引擎，結果 **additive 寫入 `reel.loopReview`**（既有 Reels 資料形狀不變、不新增 localStorage key、不改 status enum / schema version；`normalize()` 用 `{...base,...r}` spread 保留未知欄位，loopReview reload 不會被剝掉）。Gemini AI review 保留不動，Loop check 是獨立 deterministic 路徑。
+- **Tracker 與 Workflow UI 延後**：本 milestone 不改這兩個工具的 UI。
 
 ### 層 C：CLI / ACI runner `scripts/marketing-loop.mjs`
 - `node scripts/marketing-loop.mjs --input <json> --action {brief|score|learnings|next-brief}` 讀 fixture 或 reels-studio 匯出 JSON，跑引擎，印 deterministic JSON 到 stdout。
@@ -80,7 +81,10 @@
 | NEW | `tests/marketing-loop.test.mjs` | 新測試檔 |
 | NEW | `fixtures/marketing-loop/reels.json` `content-items.json` `expected-*.json` | 引入 fixtures 慣例（repo 目前無） |
 | NEW | `scripts/marketing-loop.mjs` | CLI runner |
-| EDIT | `.github/workflows/deploy-pages.yml` | 把 `tests/marketing-loop.test.mjs` 加進 `node --test` 行（唯一會動到的既有檔，只增不刪） |
+| EDIT | `.github/workflows/deploy-pages.yml` | 把 `tests/marketing-loop.test.mjs` 加進 `node --test` 行（只增不刪） |
+| EDIT | `reels-studio.html` | 復盤面板加「Run Loop Check」按鈕 + `runLoopScore`/`loopReviewHtml`，additive 存 `reel.loopReview`（不動既有欄位/key/status） |
+| EDIT | `jessi-workflow-sw.js` | cache v25→v26，PRECACHE 加新 asset |
+| EDIT | `tests/reels-studio.test.mjs` | 同步 SW cache 版號 v25→v26（7 處） |
 
 不會動：四個 HTML 工具的 UI、`jessi-workflow.js`、既有三支測試、handbook、任何既有 localStorage key、status enum、`SCHEMA_VERSION`、`REEL_STATUSES`。
 
@@ -119,16 +123,16 @@ CI 新增：`.github/workflows/deploy-pages.yml` 的 `node --test` 行加 `tests
 - `assets/marketing-loop-engine.mjs` 原始碼不含 `fetch/window/document/localStorage/Date.now/Math.random`。
 - `assets/marketing-loop-bridge.js` 只 `getItem` 既有三 key、`setItem` 只寫 `jessi-marketing-loop.v1`；regex 契約測試守住。
 - 既有 localStorage key、status enum、`SCHEMA_VERSION`、`REEL_STATUSES` 全未改。
-- `scripts/marketing-loop.mjs` 對固定 fixture 輸出 byte-stable JSON。
-- 四個 HTML 工具 UI 未改；handbook 未碰；未接 IG/Meta/Gemini API。
+- `scripts/marketing-loop-runner.mjs` 對固定 fixture 輸出 byte-stable JSON。
+- Reels Studio 僅加一個 deterministic Loop 按鈕（additive、不動 Gemini/既有欄位/key/status）；tracker 與 workflow UI 未改；handbook 未碰；未接 IG/Meta/Gemini API。
 
 ## 範圍外（Out of scope）
 
-- 不重建任何 UI、不新增 HTML 頁（後續 milestone 才在 workflow 顯示 learning summary）。
+- **不重建任何 UI**。Reels Studio 僅加一個最小 deterministic「Run Loop Check」按鈕（additive）；**Tracker 與 Workflow UI 延後**（後續 milestone 才在 tracker 加「分析內容成效 Loop」按鈕、在 workflow 顯示 learning summary）。
 - 不接 Instagram / Meta / publishing API。
 - 測試不呼叫真 Gemini / 真 LLM；引擎永不發網路。
-- 不改寫 Reels Studio 的 AI 生成路徑。
-- 不改既有 status enum、不改既有 localStorage key。
-- 不刪除 / 改名既有測試。
+- 不改寫 Reels Studio 的 AI 生成路徑（Gemini `callGemini`/`reviewScript`/`#ai-review-script` 保留）。
+- 不改既有 status enum、不改既有 localStorage key（新 key `jessi-marketing-loop.v1` 為唯一新增）。
+- 不刪除 / 改名既有測試（reels-studio 測試僅同步 SW cache 版號 v25→v26）。
 - 不改 handbook。
 - MVP 不在 tracker 加 `reelId`（延後）。
